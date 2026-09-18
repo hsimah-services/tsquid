@@ -3,12 +3,26 @@ import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import { Environment, Network, RecordSource, Store, Observable } from 'relay-runtime';
 
-const { createURI } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/uri.mjs`));
+const { createURI, normalizePathname } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/uri.mjs`));
 const { preloadEntryPoint, resource } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
 const route = createURI('/tutorials/:level/:id', {
   level: { kind: 'int', optional: false }, id: { kind: 'string', optional: false },
   filter: { kind: 'string', optional: true }, enabled: { kind: 'bool', optional: true },
   tags: { kind: 'string[]', optional: true }, counts: { kind: 'int[]', optional: true }, flags: { kind: 'bool[]', optional: true },
+});
+
+test('trailing slashes load static and parameterized routes with query state intact', () => {
+  const tutorials = createURI('/tutorials', { filter: { kind: 'string', optional: true } });
+  assert.deepEqual(tutorials.parseURI('/tutorials/'), {});
+  assert.deepEqual(tutorials.parseURI('/tutorials/?filter=turn#notes'), { filter: 'turn' });
+  assert.deepEqual(route.parseURI('/tutorials/2/a%2Fb/?enabled=false'), { level: 2, id: 'a/b', enabled: false });
+  assert.equal(tutorials.updateURI('/tutorials/?filter=old&utm=abc#notes', { filter: 'new' }), '/tutorials?filter=new&utm=abc#notes');
+  assert.deepEqual(createURI('/', {}).parseURI('/'), {});
+  assert.deepEqual(createURI('/tutorials/', {}).parseURI('/tutorials'), {});
+  assert.equal(normalizePathname('/tutorials///'), '/tutorials');
+  assert.equal(normalizePathname('/tutorials/a%2F/'), '/tutorials/a%2F');
+  assert.throws(() => route.parseURI('/tutorials//2/a/'));
+  assert.throws(() => route.parseURI('/tutorials/2/'));
 });
 
 test('URI round trip includes encoded path values and primitive collections', () => {

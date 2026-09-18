@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link as RouterLink, useHref, type LinkProps } from 'react-router';
 import { useRelayEnvironment } from 'react-relay';
 import type { IEnvironment } from 'relay-runtime';
+import { normalizePathname } from './uri';
 
 export type PreloadRoute = { path: string; preload(environment: IEnvironment, uri: string): () => void };
 
@@ -19,8 +20,8 @@ export function createLink(routes: readonly PreloadRoute[]) {
       const url = new URL(href, window.location.href);
       if (url.origin !== window.location.origin) return;
       const route = routes.find(candidate => {
-        const expected = candidate.path.split('/');
-        const actual = url.pathname.split('/');
+        const expected = normalizePathname(candidate.path).split('/');
+        const actual = normalizePathname(url.pathname).split('/');
         return expected.length === actual.length && expected.every((part, index) => part.startsWith(':') || part === actual[index]);
       });
       if (!route) return;

@@ -3,11 +3,11 @@ export type URI<I> = ReturnType<typeof createURI<I>>;
 
 /** Repeated query keys encode collections. Missing optional fields remain undefined. */
 export function createURI<I>(path: string, fields: Record<string, Field>) {
-  const parts = path.split('/');
+  const parts = normalizePathname(path).split('/');
   const pathKeys = new Set(parts.filter(p => p.startsWith(':')).map(p => p.slice(1)));
   function parseURI(uri: string): I {
     const url = new URL(uri, 'http://tsquid.local');
-    const segments = url.pathname.split('/');
+    const segments = normalizePathname(url.pathname).split('/');
     if (segments.length !== parts.length) throw new Error(`URI does not match ${path}`);
     const raw: Record<string, string[]> = Object.create(null);
     parts.forEach((part, index) => {
@@ -72,4 +72,9 @@ function parseValue(value: string, kind: string, key: string): string | number |
   if (kind === 'bool' && (value === 'true' || value === 'false')) return value === 'true';
   if (kind === 'int' && /^-?\d+$/.test(value) && Number.isSafeInteger(Number(value))) return Number(value);
   throw new Error(`Invalid ${kind} for ${key}`);
+}
+
+/** Ignore trailing separators without decoding IDs or changing interior segments. */
+export function normalizePathname(pathname: string): string {
+  return pathname.replace(/\/+$/, '') || '/';
 }
