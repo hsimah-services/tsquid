@@ -58,14 +58,7 @@ export function createURI<I>(path: string, fields: Record<string, Field>) {
     }).join('/');
     return pathname + (query.size ? `?${query}` : '');
   }
-  function updateURI(current: string | I, patch: Partial<I>): string {
-    const url = typeof current === 'string' ? new URL(current, 'http://tsquid.local') : null;
-    const next = new URL(getURI({ ...(url ? parseURI(current as string) : current as I), ...patch }), 'http://tsquid.local');
-    // Preserve unowned query state and hash (analytics, other UI state, anchors).
-    url?.searchParams.forEach((value, key) => { if (!Object.hasOwn(fields, key)) next.searchParams.append(key, value); });
-    return next.pathname + next.search + (url?.hash ?? '');
-  }
-  return { path, parseURI, getURI, updateURI };
+  return { path, parseURI, getURI };
 }
 function parseValue(value: string, kind: string, key: string): string | number | boolean {
   if (kind === 'string') return value;

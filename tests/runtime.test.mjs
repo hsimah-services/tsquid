@@ -16,7 +16,6 @@ test('trailing slashes load static and parameterized routes with query state int
   assert.deepEqual(tutorials.parseURI('/tutorials/'), {});
   assert.deepEqual(tutorials.parseURI('/tutorials/?filter=turn#notes'), { filter: 'turn' });
   assert.deepEqual(route.parseURI('/tutorials/2/a%2Fb/?enabled=false'), { level: 2, id: 'a/b', enabled: false });
-  assert.equal(tutorials.updateURI('/tutorials/?filter=old&utm=abc#notes', { filter: 'new' }), '/tutorials?filter=new&utm=abc#notes');
   assert.deepEqual(createURI('/', {}).parseURI('/'), {});
   assert.deepEqual(createURI('/tutorials/', {}).parseURI('/tutorials'), {});
   assert.equal(normalizePathname('/tutorials///'), '/tutorials');
@@ -28,9 +27,6 @@ test('trailing slashes load static and parameterized routes with query state int
 test('URI round trip includes encoded path values and primitive collections', () => {
   const input = { level: 0, id: 'a/b + 雪', filter: '', enabled: false, tags: ['a&b', '', 'a&b'], counts: [-2, 0], flags: [false, true] };
   assert.deepEqual(route.parseURI(route.getURI(input)), input);
-});
-test('update merges, removes undefined fields, preserves unowned state and hash', () => {
-  assert.equal(route.updateURI('/tutorials/1/a?filter=old&tags=x&tags=y&utm=abc#notes', { filter: undefined, enabled: false }), '/tutorials/1/a?enabled=false&tags=x&tags=y&utm=abc#notes');
 });
 test('invalid URI input is rejected instead of coerced or truncated', () => {
   for (const uri of ['/tutorials/1.2/a', '/tutorials/9007199254740992/a', '/tutorials/1/a?enabled=1', '/tutorials/1/a?filter=x&filter=y', '/wrong/1/a', '/tutorials/1/%ZZ']) assert.throws(() => route.parseURI(uri));
@@ -97,4 +93,96 @@ test('native Relay loads and renders the configured nested entrypoint graph', as
   try {
     assert.equal(renderToString(createElement(RelayEnvironmentProvider, { environment }, createElement(EntryPointContainer, { entryPointReference: reference, props: {} }))), '<p>preloaded</p>');
   } finally { reference.dispose(); t.mock.timers.tick(300_001); t.mock.timers.reset(); }
+});
+
+
+const generated = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/routes.mjs`));
+const { createElement } = await import('react');
+const { renderToString } = await import('react-dom/server');
+
+function routeState(currentRoute, input = {}) {
+  return { currentRoute, input, updateURI: () => '/unchanged' };
+}
+
+test('generated hooks accept all routes belonging to their entrypoint', () => {
+  const { RouteName, TutorialsRouteContext, TutorialDetailRouteContext, useTutorialRouteContext } = generated;
+  for (const [context, input] of [[TutorialsRouteContext, { filter: 'turn' }], [TutorialDetailRouteContext, { id: 'one' }]]) {
+    const value = routeState(context.currentRoute, input);
+    let observed;
+    function Probe() { observed = useTutorialRouteContext(); return null; }
+    renderToString(createElement(context.Context, { value }, createElement(Probe)));
+    assert.equal(observed, value);
+  }
+  assert.equal(TutorialsRouteContext.currentRoute, RouteName.Tutorials);
+});
+
+test('generated hooks reject missing providers and other active entrypoints', () => {
+  const { PlaylistsRouteContext, TutorialsRouteContext, useTutorialRouteContext } = generated;
+  function Probe() { useTutorialRouteContext(); return null; }
+  assert.throws(() => renderToString(createElement(Probe)), /outside its active entrypoint/);
+  const wrongRoute = createElement(PlaylistsRouteContext.Context,
+    { value: routeState(PlaylistsRouteContext.currentRoute) }, createElement(Probe));
+  assert.throws(() => renderToString(wrongRoute), /requires the Tutorial entrypoint; current route is Playlists/);
+  // An ancestor's Tutorial provider must not hide a nearer, different route.
+  assert.throws(() => renderToString(createElement(TutorialsRouteContext.Context,
+    { value: routeState(TutorialsRouteContext.currentRoute) }, wrongRoute)), /current route is Playlists/);
+});
+
+test('route-specific context hooks reject a different route within the same entrypoint', () => {
+  const { TutorialsRouteContext, TutorialDetailRouteContext } = generated;
+  function Probe() { TutorialsRouteContext.useRoute(); return null; }
+  assert.throws(() => renderToString(createElement(TutorialDetailRouteContext.Context,
+    { value: routeState(TutorialDetailRouteContext.currentRoute, { id: 'one' }) }, createElement(Probe))),
+  /Expected route Tutorials, but current route is TutorialDetail/);
+});
+
+test('route roots bind context state and updateURI to the current location without navigating', async () => {
+  const { defineRoute } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+  const { MemoryRouter } = await import('react-router');
+  const { RelayEnvironmentProvider } = await import('react-relay');
+  const { TutorialsURI, TutorialsRouteContext, TutorialDetailURI, TutorialDetailRouteContext, useTutorialRouteContext, RouteName } = generated;
+  for (const uri of ['/tutorials/?filter=old&utm=abc#notes', '/tutorials?filter=next&utm=xyz#other', '/tutorials/a%2Fb?utm=abc#notes']) {
+    const detail = uri.startsWith('/tutorials/a');
+    const definition = detail ? TutorialDetailURI : TutorialsURI;
+    const context = detail ? TutorialDetailRouteContext : TutorialsRouteContext;
+    const patch = detail ? { id: 'new/id' } : { filter: 'new' };
+    const clearPatch = detail ? { id: 'other' } : { filter: undefined };
+    const route = defineRoute({ uri: definition, context, getRouteType: input => input, entryPoint: parent });
+    const { environment } = setup();
+    let observed;
+    function Probe() {
+      const state = useTutorialRouteContext();
+      observed = { currentRoute: state.currentRoute, input: state.input, updated: state.updateURI(patch), cleared: state.updateURI(clearPatch) };
+      return null;
+    }
+    renderToString(createElement(MemoryRouter, { initialEntries: [uri] },
+      createElement(RelayEnvironmentProvider, { environment }, createElement(route.Root, { fallback: createElement(Probe) }))));
+    assert.equal(observed.currentRoute, detail ? RouteName.TutorialDetail : RouteName.Tutorials);
+    assert.deepEqual(observed.input, definition.parseURI(uri));
+    const suffix = uri.includes('utm=xyz') ? '&utm=xyz#other' : '&utm=abc#notes';
+    assert.equal(observed.updated, detail ? '/tutorials/new%2Fid?utm=abc#notes' : '/tutorials?filter=new' + suffix);
+    assert.equal(observed.cleared, detail ? '/tutorials/other?utm=abc#notes' : '/tutorials?' + suffix.slice(1));
+    assert.equal('updateURI' in definition, false);
+    assert.equal('updateURI' in route, false);
+  }
+});
+
+
+test('context updates preserve unowned repeated keys and remove owned collections', async () => {
+  const { defineRoute } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+  const { createRouteContextRegistry } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/context.mjs`));
+  const { MemoryRouter } = await import('react-router');
+  const { RelayEnvironmentProvider } = await import('react-relay');
+  const registry = createRouteContextRegistry();
+  const context = registry.forRoute('Test');
+  const definition = defineRoute({ uri: route, context, getRouteType: input => input, entryPoint: parent });
+  const { environment } = setup();
+  let observed;
+  function Probe() {
+    observed = context.useRoute().updateURI({ tags: undefined, filter: undefined, enabled: false });
+    return null;
+  }
+  renderToString(createElement(MemoryRouter, { initialEntries: ['/tutorials/1/a?filter=old&tags=x&tags=y&utm=abc&utm=xyz#notes'] },
+    createElement(RelayEnvironmentProvider, { environment }, createElement(definition.Root, { fallback: createElement(Probe) }))));
+  assert.equal(observed, '/tutorials/1/a?enabled=false&utm=abc&utm=xyz#notes');
 });

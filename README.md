@@ -40,6 +40,7 @@ regex-based extraction of application source is involved.
   "runtime": "@tsquid/routes",
   "routes": [{
     "name": "TutorialSearch",
+    "entryPoint": "src/components/tutorial/Tutorial.entrypoint.ts",
     "path": "/tutorials/:level/:id",
     "fields": {
       "level": { "kind": "int" },
@@ -66,14 +67,39 @@ Generated exports include `TutorialSearchInputType`, `TutorialSearchURI` and
 ```ts
 TutorialSearchURI.getURI({ level: 2, id: 'a/b', tags: ['core', 'balance'] });
 TutorialSearchURI.parseURI('/tutorials/2/a%2Fb?unlocked=false');
-TutorialSearchURI.updateURI(currentURI, { filter: 'turn', tags: undefined });
 ```
 
-`getURI` starts fresh. `updateURI(currentURIOrInput, patch)` merges a partial input;
-explicit `undefined` removes optional values. When given a URI it preserves
-unowned query parameters and the hash. Neither method navigates. The generated
-context's `useRoute()` exposes `input` and `updateURI(patch)` bound to the current
-URI. Pass the returned string to your router's `navigate` or a Link.
+`getURI` constructs a destination from explicit input and works from any route.
+URI helpers and route definitions do not expose `updateURI`. Only the active
+route context holds `currentRoute`, `input`, and `updateURI(patch)`. This method
+merges a partial input into the current location, removes optional values set to
+`undefined`, and preserves unowned query parameters and the hash. Pass the returned
+string to `navigate` or a Link; updating a URI does not navigate. To navigate to a
+different route, use that route's `getURI` instead.
+
+Every route declares an `entryPoint` module path relative to the config, such as
+`src/components/tutorial/Tutorial.entrypoint.ts`. The generator derives `Tutorial`
+from the filename and emits `useTutorialRouteContext()`. Routes sharing that module
+share the hook. Module basenames must be unique across different module paths.
+Paths must be normalized, relative paths; the generator does not parse TypeScript
+or import these modules. Application `defineRoute` calls still wire the descriptor.
+
+`RouteName` is the generated string enum of all configured route names. The hook
+returns a discriminated union of its entrypoint's route states, so checking
+`currentRoute` narrows both `input` and `updateURI` to that route's fields:
+
+```ts
+const route = useTutorialRouteContext();
+if (route.currentRoute === RouteName.TutorialSearch) {
+  navigate(route.updateURI({ filter: 'turn' }));
+}
+```
+
+The hook throws outside a route provider or when a different entrypoint is active.
+All route providers in a generated catalogue share one context: a nested route
+cannot accidentally expose a stale ancestor's state. Route-specific
+`TutorialSearchRouteContext.useRoute()` remains available and requires that exact
+route, whereas the generated entrypoint hook accepts all routes for its module.
 
 ## Relay configuration
 
@@ -135,7 +161,7 @@ environment-provider options are rejected. This follows Relay's documented
 
 ## Toroid example and limits
 
-`src/components/tutorial/TutorialEntryPoint.tsx` selects the tutorial list query
+`src/components/tutorial/Tutorial.entrypoint.ts` selects the tutorial list query
 and a nested detail entrypoint when an ID exists. Both `/tutorials?id=…` and the
 existing `/tutorials/:id` route work. Tiles use the nested query reference for the
 existing lightbox/modal. Selections outside the currently loaded/filtered grid

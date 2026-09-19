@@ -3,7 +3,7 @@ import { EntryPointContainer, fetchQuery, useEntryPointLoader, useRelayEnvironme
 import { createOperationDescriptor, getRequest, type IEnvironment, type OperationType } from 'relay-runtime';
 import { useLocation } from 'react-router';
 import type { URI } from './uri';
-import type { createRouteContext } from './context';
+import type { RouteContext } from './context';
 
 // Structural types avoid Relay 21's circular EntryPoint declaration (rejected by TS7).
 // They describe the same public Relay contract; casts are confined to hook/container adapters.
@@ -43,9 +43,9 @@ export function resource<C>(id: string, component: C): JSResourceReference<C> {
   return { getModuleId: () => id, getModuleIfRequired: () => component, load: () => Promise.resolve(component) };
 }
 
-export function defineRoute<I, R extends Record<string, unknown>>(config: {
+export function defineRoute<I, R extends Record<string, unknown>, N extends string>(config: {
   uri: URI<I>;
-  context: ReturnType<typeof createRouteContext<I>>;
+  context: RouteContext<I, N>;
   getRouteType: (input: I) => R;
   entryPoint: AnyEntryPoint & { getPreloadProps: (route: R) => ReturnType<AnyEntryPoint['getPreloadProps']> };
 }) {
@@ -64,7 +64,7 @@ export function defineRoute<I, R extends Record<string, unknown>>(config: {
     const provider = useMemo(() => ({ getEnvironment: () => environment }), [environment]);
     const [reference, load] = useEntryPointLoader(provider, config.entryPoint) as unknown as [EntryPointReference<AnyEntryPoint> | null, (route: R) => void, () => void];
     useEffect(() => { load(route); }, [load, route]);
-    const context = useMemo(() => ({ input, updateURI: (patch: Partial<I>) => config.uri.updateURI(uri, patch) }), [input, uri]);
+    const context = useMemo(() => ({ currentRoute: config.context.currentRoute, input, updateURI: (patch: Partial<I>) => getUpdatedURI(config.uri, uri, input, patch) }), [input, uri]);
     return <config.context.Context value={context}><RouteContext value={route}>
       <Suspense fallback={fallback}>{reference ? <RouteEntryPointContainer entryPointReference={reference} props={{}} /> : fallback}</Suspense>
     </RouteContext></config.context.Context>;
@@ -75,6 +75,19 @@ export function defineRoute<I, R extends Record<string, unknown>>(config: {
       return preloadEntryPoint(environment, config.entryPoint, config.getRouteType(config.uri.parseURI(uri)));
     },
   };
+}
+
+// Only route roots bind this operation to their active location and expose it
+// through context. URI definitions can construct and parse, but cannot update.
+function getUpdatedURI<I>(definition: URI<I>, uri: string, input: I, patch: Partial<I>): string {
+  const current = new URL(uri, 'http://tsquid.local');
+  const next = new URL(definition.getURI({ ...input, ...patch }), 'http://tsquid.local');
+  // Every owned query key present in the URL was parsed into input, including
+  // optional fields. Keep only unowned query keys from the original location.
+  current.searchParams.forEach((value, key) => {
+    if (!Object.prototype.hasOwnProperty.call(input, key)) next.searchParams.append(key, value);
+  });
+  return next.pathname + next.search + current.hash;
 }
 
 /** Returns a disposer for both subscriptions and GC retains, including nested queries. */
