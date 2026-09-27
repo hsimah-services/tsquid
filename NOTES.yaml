@@ -3,7 +3,7 @@
 about:
   what: opinionated React framework on strongly typed route context
   stack: React 19, React Router 8, Relay 21, Astryx 0.6 (theme-neutral), StyleX 0.19, Vite 8
-  npm: "@tsquid/{routes,codegen,vite,eslint-plugin}; 0.1.0 published 2026-09-27"
+  npm: "@tsquid/{routes,codegen,vite,eslint-plugin}; first published 2026-09-27; versions in packages/*/package.json"
 
 layout:
   Cargo.toml: cargo workspace, crates/*

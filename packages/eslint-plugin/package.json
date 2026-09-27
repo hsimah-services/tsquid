@@ -1,6 +1,6 @@
 {
   "name": "@tsquid/eslint-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "tsquid's UI rules and entity architecture checker for React + Relay + Astryx apps.",
   "keywords": [
     "tsquid",
