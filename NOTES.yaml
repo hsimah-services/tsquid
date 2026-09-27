@@ -52,13 +52,13 @@ layout:
       no pnpm-workspace.yaml: would split the workspace; create-app writes one
 
   scripts/:
-    toolchain.sh: container runner (image tsquid-toolchain:2)
+    toolchain.sh: container runner (image tsquid-toolchain:3)
     create-app.sh: copy starter, pin ^versions, rename
-    publish.mjs: "[--dry-run] pack + publish versions not on npm"
-  .docker/Dockerfile: rust:1 + wasm32 target + node 22 + npm + pnpm 12.4.1
+    publish.mjs: "[--dry-run] pack + npm stage publish versions not on npm; tries all, reports failures"
+  .docker/Dockerfile: rust:1 + wasm32 target + node 22 + npm 11 + pnpm 12.4.1
   .github/workflows/:
     check.yml: cargo test; pnpm test; starter routes:check
-    release.yml: manual, main only, trusted publishing
+    release.yml: manual, main only, trusted publishing -> staged; approve via npm stage approve (2FA)
 
 commands: # via scripts/toolchain.sh
   test: cargo test --locked && pnpm test
@@ -76,7 +76,6 @@ conventions:
     - HOME=/tmp; COREPACK_HOME + XDG_DATA_HOME pinned in image
 
 todo:
-  - trusted publisher per package (release.yml); publishing access = 2FA, no tokens
   - "@tsquid/create (`pnpm create @tsquid`), replacing create-app.sh"
   - changesets if manual bumps get tedious
   - astryx integration (templates/docs via astryx CLI)?

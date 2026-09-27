@@ -62,9 +62,10 @@ Don't weaken these; raise the trade-off instead.
 
 ## Releasing
 
-Bump versions, merge, run the Release workflow. `scripts/publish.mjs` packs each
-public package and publishes versions not on npm, using trusted publishing (no
-token).
+Bump versions, merge, then run the Release workflow. `scripts/publish.mjs` packs
+each public package and stages (`npm stage publish`) the versions not on npm, via
+trusted publishing. A maintainer approves each one with `npm stage approve` (2FA).
+The trusted publishers allow staging only, not `npm publish`.
 
 ## Git
 
