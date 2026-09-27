@@ -1,2 +1,9 @@
 packages:
   - packages/*
+  - templates/*
+allowBuilds:
+  '@astryxdesign/cli': true
+  '@astryxdesign/core': true
+onlyBuiltDependencies:
+  - "@astryxdesign/cli"
+  - "@astryxdesign/core"

@@ -23,16 +23,37 @@ deliberately opinionated about how a web application is navigated:
 
 ## Status
 
-Early. The first piece is routing, extracted from
-[toroid](https://github.com/hsimah-services/toroid), which is still its only user.
+Early. Extracted from [toroid](https://github.com/hsimah-services/toroid), which
+is still its only production user. Nothing is published yet; apps depend on the
+packages from GitHub.
 
-| Piece | Where | State |
+| Piece | Where | What it is |
 | --- | --- | --- |
-| Route generator (`tsquid-codegen`) | `crates/tsquid-codegen` | Works; build from source |
-| Route runtime (`@tsquid/routes`) | `packages/routes` | Works; not yet published |
-| Astryx + StyleX UI conventions | toroid's client | Not yet part of tsquid |
+| `tsquid-codegen` | `crates/tsquid-codegen` | Rust route generator; build from source |
+| `@tsquid/routes` | `packages/routes` | Route runtime: URIs, route context, Relay entrypoints, preloading links |
+| `@tsquid/vite` | `packages/vite` | Vite preset: StyleX, React, Relay, with dedupe for singletons |
+| `@tsquid/eslint-plugin` | `packages/eslint-plugin` | UI rules, architecture checker, and the [UI standards](packages/eslint-plugin/docs/ui-standards.md) |
+| Starter app | `templates/app` | Astryx + StyleX + Relay + typed routes, ready to run |
 
-Peer dependencies of the runtime: React 19, React Router 8, Relay 21.
+Built on React 19, React Router 8, Relay 21, Astryx 0.6 and StyleX 0.19.
+
+## Start an app
+
+```sh
+scripts/create-app.sh ../my-app
+cd ../my-app
+scripts/toolchain.sh pnpm install
+scripts/dev.sh                     # http://localhost:5173
+```
+
+The new app comes with:
+- a navigation shell and two routes: a static Home page, and a Profile page that
+  preloads a Relay query;
+- lint rules and an architecture check;
+- its own container toolchain, whose image includes `tsquid-codegen`.
+
+Its README covers adding routes. Pass `--branch <name>` to build against a tsquid
+branch other than `main`.
 
 ## At a glance
 
@@ -77,6 +98,10 @@ The full config format and runtime API (`defineRoute`, `RouteEntryPoint`,
 ```
 crates/tsquid-codegen/   Rust generator: routes.json → one TypeScript file
 packages/routes/         @tsquid/routes runtime (TS source) + its tests and fixtures
+packages/vite/           @tsquid/vite preset
+packages/eslint-plugin/  @tsquid/eslint-plugin rules, architecture checker, UI standards
+templates/app/           starter app; a workspace member, so CI builds it
+scripts/create-app.sh    copies the starter into a new app
 scripts/toolchain.sh     runs any command in the Rust + Node toolchain container
 .docker/                 toolchain image
 NOTES.yaml               terse per-folder notes; the most detailed map of the repo
@@ -89,12 +114,13 @@ The host needs only podman or docker. Rust, Node and pnpm run in a container:
 ```sh
 scripts/toolchain.sh pnpm install
 scripts/toolchain.sh cargo test --locked   # generator
-scripts/toolchain.sh pnpm test             # runtime typecheck + tests
+scripts/toolchain.sh pnpm test             # every package's tests + the starter's full check
+scripts/toolchain.sh pnpm routes:template  # regenerate the starter's typed routes
 scripts/toolchain.sh bash                  # shell in the toolchain
 ```
 
-CI (`.github/workflows/check.yml`) runs the same commands, and also checks that the
-committed generator fixture is up to date.
+CI (`.github/workflows/check.yml`) runs the same commands. It also checks that the
+committed generator output for the test fixture and the starter is up to date.
 
 ## License
 

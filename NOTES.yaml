@@ -2,17 +2,17 @@
 
 about:
   what: opinionated UI framework built on strongly typed route context
-  stack: React 19, React Router 8, Relay 21; Astryx + StyleX for UI (not in repo yet)
+  stack: React 19, React Router 8, Relay 21, Astryx 0.6 (theme-neutral), StyleX 0.19, Vite 8
   mechanism: routes.json -> generated TS (rust) + hand-written TS runtime
-  first-feature: typed routes as Relay entrypoints
+  pieces: typed routes as Relay entrypoints; vite preset; eslint rules + architecture check; starter app
   origin: hsimah-services/toroid client/tsquid, history imported at toroid ee9ff2a
   consumer: toroid client (still uses its in-tree copy via link:./tsquid)
 
 layout:
   Cargo.toml: cargo workspace, members crates/*
   Cargo.lock: workspace lockfile (shared by all crates)
-  package.json: pnpm workspace root; `pnpm test` runs every package's test
-  pnpm-workspace.yaml: packages/*
+  package.json: pnpm workspace root; test (pnpm -r test), routes:template
+  pnpm-workspace.yaml: packages/* + templates/*; allowBuilds for astryx postinstall
   tsconfig.base.json: shared compiler options; packages extend it
   NOTES.yaml: this file
   README.md: framework opinions, status table, quick example, dev commands
@@ -44,18 +44,49 @@ layout:
         run.mjs: transpiles runtime with TS6 JS API, then runs runtime.test.mjs
         runtime.test.mjs: node:test runtime tests
       README.md: user-facing docs for config format + runtime API
+    vite/:
+      what: "@tsquid/vite: tsquid() -> vite plugins"
+      index.mjs: stylex (unplugin-stylex) -> react -> relay; dedupe react/relay/router/astryx; injects `var global = globalThis`
+      index.d.ts: types for tsquid()
+      why-order: plugin-react 6 uses oxc, not babel; stylex must see source first
+    eslint-plugin/:
+      what: "@tsquid/eslint-plugin: UI rules + architecture checker (from toroid client/eslint)"
+      src/index.mjs: plugin; configs.recommended (flat config, rules as tsquid/*, main.tsx exception)
+      src/rules.mjs: module-order, constant-names, module-exports, local-component-names, render-only-components
+      src/check-architecture.mjs: auditArchitecture (entity dirs, __private__, feature owners, consumer counts)
+      bin/tsquid-check-architecture.mjs: CLI; checks <cwd>/src with components under src/components
+      docs/ui-standards.md: THE UI standards doc; ships in node_modules for apps
+      test/: RuleTester + architecture tests (node --test)
+
+  templates/:
+    app/:
+      what: starter app copied by scripts/create-app.sh; workspace member so CI checks it
+      deps: "@tsquid/* as workspace:*; create-app rewrites to github:hsimah-services/tsquid#<branch>&path:/packages/<name>"
+      routes.json: Home (/) static, Profile (/me) with ProfileQuery
+      schema.graphql: placeholder (Query.viewer); apps replace via pnpm schema
+      src/app/: App (Relay env, Astryx Theme, LinkProvider->AppLink), router, AppLink (createLink preloading)
+      src/relay/environment.ts: plain fetch to /graphql
+      src/routes/: <entity>Routes.ts defineRoute; __generated__/routes.ts from codegen (committed)
+      src/components/: navigation (AppShell+SideNav), home, profile (+ relay __generated__, committed)
+      .docker/Dockerfile: node 22 bookworm + git + tsquid-codegen built from git branch (ARG TSQUID_BRANCH)
+      scripts/: toolchain.sh (container runner; TOOLCHAIN_PUBLISH for ports), dev.sh (5173), fetch-schema.mjs
+      AGENTS.md: tsquid guidance + generated ASTRYX block (astryx init --features agents)
+      no-pnpm-workspace.yaml: would make it its own workspace root; create-app writes one
 
   scripts/:
     toolchain.sh: runs any command in the toolchain container (podman or docker)
+    create-app.sh: "<dir> [--branch b]: copy templates/app, rewrite deps/name/Dockerfile ARG, write pnpm-workspace.yaml"
   .docker/:
     Dockerfile: rust:1 + node 22 + pnpm 12.4.1 (corepack); image tsquid-toolchain:1
   .github/workflows/:
-    check.yml: codegen job (cargo test, fixture --check) + packages job (pnpm test)
+    check.yml: codegen job (cargo test, fixture + template routes --check) + packages job (pnpm test incl. template check)
 
 commands: # all via scripts/toolchain.sh; host has no rust/node
   rust-tests: cargo test --locked
   js-install: pnpm install --frozen-lockfile
   js-tests: pnpm test
+  template-routes: pnpm routes:template
+  new-app: scripts/create-app.sh ../my-app (host; no container needed)
   regen-fixture: cargo run -p tsquid-codegen -- packages/routes/tests/routes.json packages/routes/tests/routes.generated.ts
   shell: bash
 
@@ -68,10 +99,16 @@ conventions:
   container-gotchas:
     - pnpm 12 reads pnpm_config_*, not npm_config_*
     - HOME is /tmp in container; COREPACK_HOME + XDG_DATA_HOME are pinned in the image
+    - pnpm needs git for github:...&path: deps (app image installs it)
+    - codegen binary + node image must share a debian release (bookworm) for glibc
+  non-routes-packages: plain .mjs (+ .d.ts), loaded by vite/eslint from node_modules without TS
 
 todo:
   - binary distribution (npm per-platform optional deps like esbuild/biome? cargo install?)
   - publish @tsquid/routes; decide ship-as-source vs build
   - switch toroid to published packages; remove its client/tsquid + routes CI job
   - fixtures live in packages/routes; rethink if crate is published to crates.io
-  - bring Astryx + StyleX UI standards (and toroid eslint ui rules) into tsquid
+  - switch toroid to @tsquid/vite + @tsquid/eslint-plugin; drop its client/eslint + docs/ui-standards.md
+  - make tsquid an Astryx integration (astryx.integration: templates/docs in the astryx CLI)?
+  - template not browser-tested at runtime yet (build + dev transforms verified only)
+  - vite build warns chunk > 500 kB (astryx bundle); consider code splitting
