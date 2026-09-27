@@ -1,0 +1,72 @@
+# tsquid: proto-documentation. Terse; update alongside the code.
+
+about:
+  what: UI code generation framework; JSON config -> generated TS + hand-written TS runtime
+  first-feature: typed routes (React 19, React Router 8, Relay 21 entrypoints)
+  origin: hsimah-services/toroid client/tsquid, history imported at toroid ee9ff2a
+  consumer: toroid client (still uses its in-tree copy via link:./tsquid)
+
+layout:
+  Cargo.toml: cargo workspace, members crates/*
+  Cargo.lock: workspace lockfile (shared by all crates)
+  package.json: pnpm workspace root; `pnpm test` runs every package's test
+  pnpm-workspace.yaml: packages/*
+  tsconfig.base.json: shared compiler options; packages extend it
+  NOTES.yaml: this file
+
+  crates/:
+    tsquid-codegen/:
+      what: routes generator binary; routes.json -> one .ts file
+      src/main.rs: whole generator + unit tests (single file for now)
+      deps: serde, serde_json only
+      usage: tsquid-codegen CONFIG.json OUTPUT.ts [--check]
+      tests: read fixtures from packages/routes/tests (relative include_str!)
+
+  packages/:
+    routes/:
+      what: "@tsquid/routes: runtime imported by generated code + apps"
+      shipped-as: raw .ts/.tsx source via package.json exports; no build step
+      private: true (not published yet)
+      runtime/:
+        uri.ts: createURI; getURI/parseURI; strict field kinds
+        context.tsx: createRouteContextRegistry; one shared context per catalogue
+        entrypoint.tsx: defineRoute, RouteEntryPoint types, preloadEntryPoint, resource
+        Link.tsx: createLink; hover/focus Relay preload, 30s release
+      tests/:
+        routes.json: fixture config (runtime "../runtime")
+        routes.generated.ts: generator output for fixture; checked by cargo test + CI --check
+        types.ts: type-level tests (@ts-expect-error); run by tsc
+        run.mjs: transpiles runtime with TS6 JS API, then runs runtime.test.mjs
+        runtime.test.mjs: node:test runtime tests
+      README.md: user-facing docs for config format + runtime API
+
+  scripts/:
+    toolchain.sh: runs any command in the toolchain container (podman or docker)
+  .docker/:
+    Dockerfile: rust:1 + node 22 + pnpm 12.4.1 (corepack); image tsquid-toolchain:1
+  .github/workflows/:
+    check.yml: codegen job (cargo test, fixture --check) + packages job (pnpm test)
+
+commands: # all via scripts/toolchain.sh; host has no rust/node
+  rust-tests: cargo test --locked
+  js-install: pnpm install --frozen-lockfile
+  js-tests: pnpm test
+  regen-fixture: cargo run -p tsquid-codegen -- packages/routes/tests/routes.json packages/routes/tests/routes.generated.ts
+  shell: bash
+
+conventions:
+  generated-output: committed; consumers don't need rust to build
+  typescript: # two installs per package
+    typescript: "@typescript/typescript6; JS API (transpileModule in run.mjs)"
+    "@typescript/native": typescript 7; provides tsc
+  toolchain-caches: $XDG_CACHE_HOME/tsquid/{pnpm-store,cargo}
+  container-gotchas:
+    - pnpm 12 reads pnpm_config_*, not npm_config_*
+    - HOME is /tmp in container; COREPACK_HOME + XDG_DATA_HOME are pinned in the image
+
+todo:
+  - binary distribution (npm per-platform optional deps like esbuild/biome? cargo install?)
+  - publish @tsquid/routes; decide ship-as-source vs build
+  - switch toroid to published packages; remove its client/tsquid + routes CI job
+  - root README
+  - fixtures live in packages/routes; rethink if crate is published to crates.io
