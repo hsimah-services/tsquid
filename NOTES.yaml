@@ -1,8 +1,10 @@
 # tsquid: proto-documentation. Terse; update alongside the code.
 
 about:
-  what: UI code generation framework; JSON config -> generated TS + hand-written TS runtime
-  first-feature: typed routes (React 19, React Router 8, Relay 21 entrypoints)
+  what: opinionated UI framework built on strongly typed route context
+  stack: React 19, React Router 8, Relay 21; Astryx + StyleX for UI (not in repo yet)
+  mechanism: routes.json -> generated TS (rust) + hand-written TS runtime
+  first-feature: typed routes as Relay entrypoints
   origin: hsimah-services/toroid client/tsquid, history imported at toroid ee9ff2a
   consumer: toroid client (still uses its in-tree copy via link:./tsquid)
 
@@ -13,6 +15,9 @@ layout:
   pnpm-workspace.yaml: packages/*
   tsconfig.base.json: shared compiler options; packages extend it
   NOTES.yaml: this file
+  README.md: framework opinions, status table, quick example, dev commands
+  AGENTS.md: agent guidance; framework invariants, conventions, toolchain
+  CLAUDE.md: imports AGENTS.md (@AGENTS.md)
 
   crates/:
     tsquid-codegen/:
@@ -68,5 +73,5 @@ todo:
   - binary distribution (npm per-platform optional deps like esbuild/biome? cargo install?)
   - publish @tsquid/routes; decide ship-as-source vs build
   - switch toroid to published packages; remove its client/tsquid + routes CI job
-  - root README
   - fixtures live in packages/routes; rethink if crate is published to crates.io
+  - bring Astryx + StyleX UI standards (and toroid eslint ui rules) into tsquid
