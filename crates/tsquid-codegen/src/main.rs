@@ -235,16 +235,16 @@ mod tests {
     }
     #[test]
     fn generated_fixture_is_current() {
-        let config: Config = serde_json::from_str(include_str!("../tests/routes.json")).unwrap();
+        let config: Config = serde_json::from_str(include_str!("../../../packages/routes/tests/routes.json")).unwrap();
         assert_eq!(
             generate(&config).unwrap(),
-            include_str!("../tests/routes.generated.ts")
+            include_str!("../../../packages/routes/tests/routes.generated.ts")
         );
     }
 
     #[test]
     fn derives_hooks_from_entrypoint_module_names() {
-        let config: Config = serde_json::from_str(include_str!("../tests/routes.json")).unwrap();
+        let config: Config = serde_json::from_str(include_str!("../../../packages/routes/tests/routes.json")).unwrap();
         let text = generate(&config).unwrap();
         assert!(text.contains("export enum RouteName"));
         assert_eq!(
@@ -271,7 +271,7 @@ mod tests {
             assert!(generate(&config).is_err(), "{module}");
         }
         let mut config: Config =
-            serde_json::from_str(include_str!("../tests/routes.json")).unwrap();
+            serde_json::from_str(include_str!("../../../packages/routes/tests/routes.json")).unwrap();
         config.routes[1].entry_point = "other/Tutorial.entrypoint.ts".into();
         assert!(generate(&config).unwrap_err().contains("ambiguous"));
     }
