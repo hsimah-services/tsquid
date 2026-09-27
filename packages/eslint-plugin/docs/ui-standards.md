@@ -1,185 +1,119 @@
-# UI code standards
+# UI standards
 
-These rules apply to handwritten `src/` code in a tsquid app. Relay- and
-tsquid-generated artifacts are compiler-owned; tooling/configuration is outside
-the UI module conventions. `@tsquid/eslint-plugin` enforces the mechanical parts.
+Applies to handwritten code in `src/`. Generated artifacts are exempt.
+`@tsquid/eslint-plugin` enforces the mechanical parts; review covers the rest.
 
-## Entity ownership
+## Entities
 
 ```text
 components/
-  tutorial/
-    TutorialPage.tsx
-    TutorialDetail.tsx
-    TutorialTile.tsx
-    TutorialModal.tsx
-    TutorialLightbox.tsx
-    page/                         # substantial TutorialPage internals
-    detail/                       # substantial TutorialDetail internals
-      useUnlockTutorialMutation.ts
-    __private__/                  # shared within this entity
-      TutorialLockIcon.tsx
+  article/                 # entity: kebab-case
+    ArticlePage.tsx        # public: starts with the entity's PascalCase name
+    ArticleDetail.tsx
+    Article.entrypoint.ts
+    detail/                # feature internals, owned by ArticleDetail
+      usePublishArticleMutation.ts
+    __private__/           # shared within the entity
+      ArticleByline.tsx
 ```
 
-Public modules live directly inside the entity directory and start with its
-PascalCase name. Entity directories use lowercase kebab-case. Feature folder
-names match the public owner's suffix: `TutorialDetail` owns `detail/`,
-`TutorialLightbox` owns `lightbox/`. Create folders only when needed.
+- Other entities and `app/` import public modules only.
+- A feature folder (`detail/`) is importable only by its owner (`ArticleDetail`)
+  and by modules in that folder.
+- `__private__/` is importable anywhere in its entity. It can't import feature
+  internals.
+- `index.ts` barrels may only re-export public modules explicitly.
+- Relative imports only; no path aliases. Dynamic imports must use literal paths.
 
-Outside consumers import public modules. Feature internals may be imported only
-by their public owner and modules in the same feature. `__private__` may be used
-throughout its entity, but cannot depend on feature internals. Neither private
-nor feature implementations can be exposed through barrels. Generated artifacts
-are an explicit exception for Relay infrastructure such as preload registration.
+## Modules
 
-Prefer direct public imports. Optional `index.ts` barrels may contain explicit
-public re-exports only. Use relative local imports: the architecture checker
-resolves static imports, re-exports, literal dynamic imports, and type imports.
-New project aliases need resolver support before being introduced.
+Order:
+1. imports;
+2. local `SHOUTING_SNAKE_CASE` constants;
+3. named exports;
+4. local components, hooks, helpers and types;
+5. `stylex.create`.
 
-## Module layout
-
-Keep declarations in this order:
-
-1. Imports, including type imports.
-2. Local module constants in `SHOUTING_SNAKE_CASE`.
-3. Named exports: primary component/function/data and closely related types.
-4. Local components, hooks, helpers, and private types.
-5. StyleX declarations at the very bottom.
-
-Exported constants belong in the exports section and still use uppercase names.
-Function-valued helpers keep normal names; the StyleX `styles` binding is also
-exempt from constant casing. Module data uses named `const` bindings, not mutable
-module state or destructuring. Prefer function declarations for components and
-helpers. Do not reorder eager initialization in a way that changes execution.
-
-A module must export its filename's name, or the uppercase equivalent for data.
-Entrypoint descriptors use `<Entity>.entrypoint.ts` (for example,
-`Tutorial.entrypoint.ts`), with `TutorialEntryPoint` / `TUTORIAL_ENTRY_POINT`
-exports. The lint rules treat this suffix as `EntryPoint`. These modules use
-`createElement` when a small Relay wrapper is needed; page UI stays in `.tsx`.
-
-Related exports extend that name: `TutorialDetail`, `TutorialDetailProps`,
-`TutorialDetailQuery`, `TUTORIAL_DETAIL_QUERY`. No unrelated helper exports,
-default exports, or star exports. Export props types only when useful; do not
-create a one-consumer `types.ts` file.
+- Export the filename's name (or its `SHOUTING_SNAKE_CASE` form for data), plus
+  related names: `ArticleDetail`, `ArticleDetailProps`, `ARTICLE_DETAIL_QUERY`.
+- No default exports, star exports or unrelated exports.
+- `<Name>.entrypoint.ts` exports `<Name>EntryPoint` and `<NAME>_ENTRY_POINT`. Use
+  `createElement` there; page UI lives in `.tsx`.
+- Local components are named `Owner_Part` (`ArticleDetail_Byline`) and declared
+  at module scope.
+- Module data is `const`, not destructured, and never mutable.
 
 ```tsx
-import * as stylex from '@stylexjs/stylex';
 import { Text } from '@astryxdesign/core';
+import * as stylex from '@stylexjs/stylex';
 
-const EMPTY_LABEL = 'No notes';
+const EMPTY_LABEL = 'No summary';
 
-export interface TutorialDetailProps {
-  notes: string | null;
+export interface ArticleDetailProps {
+  summary: string | null;
 }
 
-export function TutorialDetail({ notes }: TutorialDetailProps) {
-  return <TutorialDetail_Notes text={getNotesLabel(notes)} />;
+export function ArticleDetail({ summary }: ArticleDetailProps) {
+  return <ArticleDetail_Summary text={getSummaryLabel(summary)} />;
 }
 
-function TutorialDetail_Notes({ text }: { text: string }) {
-  return <Text xstyle={styles.notes}>{text}</Text>;
+function ArticleDetail_Summary({ text }: { text: string }) {
+  return <Text xstyle={styles.summary}>{text}</Text>;
 }
 
-function getNotesLabel(notes: string | null) {
-  return notes?.trim() || EMPTY_LABEL;
+function getSummaryLabel(summary: string | null) {
+  return summary?.trim() || EMPTY_LABEL;
 }
 
 const styles = stylex.create({
-  notes: { color: 'var(--color-text-secondary)' },
+  summary: { color: 'var(--color-text-secondary)' },
 });
 ```
 
-## Local components and module size
+## Extraction
 
-Local component names use their module owner, an underscore, and a descriptive
-suffix: `TutorialDetail_Notes`, `TutorialPage_Grid`. This also applies to arrow
-and memoized components. Declare components at module scope so their identity
-survives renders. Local hooks use names such as `useTutorialDetail`; pure helpers
-use ordinary descriptive camelCase names.
+- Keep single-use components, hooks, helpers and types in their owner.
+- Extract a module when it has two or more importing modules, or when it is a
+  substantial boundary. A single-consumer boundary needs a comment before its
+  imports: `/** @module-boundary <reason> */`.
+- A `__private__/` module needs two or more consumers, even with a boundary comment.
+- Relay mutations always go in their own `use<Operation>Mutation.ts`, even with
+  one consumer.
 
-Keep small single-use components, hooks, helpers, and types in their owner.
-Extract a module when it has multiple consumers or forms a substantial,
-independently understandable boundary. A larger single-use feature module must
-explain its boundary in a documentation comment before the imports:
+## Components
 
-```ts
-/** @module-boundary Owns the editor's keyboard navigation and selection state. */
-```
-
-The checker counts distinct importing modules, including type imports. Two imports
-from one consumer do not establish reuse. A one-consumer module cannot live in
-`__private__`, even with a boundary comment: put it in its feature or inline it.
-Do not add dummy consumers to satisfy lint. Review boundary explanations; line
-counts alone cannot determine useful ownership.
-
-**Relay mutation hooks always get their own `use<Operation>Mutation.ts` file**,
-with the matching named hook export. Keep the mutation document and optimistic
-response/updater there even with one consumer. Use the owning feature folder, or
-`__private__` for a shared mutation hook.
-
-## Renderers and logic
-
-Components render prepared state. Move data normalization, filtering, sorting,
-reductions, subscriptions, timers, effects, DOM measurements, and mutation handling
-into hooks or pure helpers. Start with local helpers: extracting logic does not
-imply creating a file. Hooks return state and actions needed by the renderer.
-
-Renderers may read Relay fragments/queries, call hooks, destructure results, use
-simple display conditions, and map prepared items to JSX. Complex event handlers
-belong in hooks/helpers; pass their actions to the renderer.
-
-Lint rejects direct effect hooks, network/mutation side effects, timers, async
-components, and `filter`/`flatMap`/`reduce`/`sort`/`toSorted` calls in renderers,
-including inline callbacks. React hook rules and exhaustive dependencies are
-errors. Static checks catch common violations; they cannot prove purity or
-judge arbitrary business logic. Reviewers still check data flow and cleanup.
+- Components render prepared state. Effects, subscriptions, timers, requests,
+  measurements, `filter`/`flatMap`/`reduce`/`sort`/`toSorted`, and complex
+  handlers go in hooks or helpers.
+- Components may read fragments and queries, call hooks, branch on display
+  conditions, and `map` to JSX.
+- Components are synchronous.
 
 ## Styling
 
-tsquid apps compile StyleX (`@tsquid/vite`). Use `stylex.create()` at the bottom of the owner,
-`stylex.props()` on DOM elements, and Astryx's `xstyle` prop. Prefer Astryx components
-and tokens for ordinary layout/appearance. Measurement-dependent geometry belongs
-in dynamic StyleX entries. Do not introduce inline style objects, parallel CSS
-frameworks, or tiny single-use style files.
+- Use Astryx components for layout, and tokens (`var(--color-*)`,
+  `var(--spacing-*)`) rather than raw values.
+- Use StyleX: `stylex.props()` on DOM elements, `xstyle` on Astryx components.
+  Dynamic StyleX entries handle measured geometry.
+- No inline `style`, other CSS frameworks, or single-use stylesheets.
 
-## Enforcement and fixes
+## Enforcement
 
-In a tsquid app (the starter wires these up):
-
-```bash
-pnpm lint       # ESLint + tsquid-check-architecture (complete source import graph)
-pnpm lint:fix   # safe fixes, then architecture check
-pnpm check      # lint + Relay/TypeScript/Vite build
+```sh
+pnpm lint       # eslint + tsquid-check-architecture
+pnpm lint:fix   # safe fixes
 ```
 
-Every violation fails lint. There is no baseline suppressing existing violations.
-`pnpm check` is required before review/merge. Generated files are excluded.
-`main.tsx` is the bootstrap exception to constant casing, declaration ordering,
-and local component naming; it performs imperative app initialization.
-
-| Check | Automatic fix |
+| Check | Autofix |
 | --- | --- |
-| `tsquid/module-order` | Reorders only when eager initialization order is unchanged and no comments/directives can be misattached. |
-| `tsquid/constant-names` | Scope-aware local renames; preserves object keys and type annotations. |
-| `tsquid/module-exports` | Diagnostic only: public API changes require updating consumers. |
-| `tsquid/local-component-names` | Scope-aware local renames including JSX references. |
-| `tsquid/render-only-components` | Diagnostic only: extracting logic requires judgment. |
-| `tsquid-check-architecture` | Diagnostic only: directories, boundaries, consumers, mutation exceptions. |
+| `tsquid/module-order` | Reorders when initialization order is preserved and no comments move |
+| `tsquid/constant-names` | Scope-aware rename |
+| `tsquid/local-component-names` | Scope-aware rename, including JSX |
+| `tsquid/module-exports` | None |
+| `tsquid/render-only-components` | None |
+| `tsquid-check-architecture` | None |
 
-Renames refuse collisions, exported bindings, modules with default exports, and
-modules containing `eval`. Moves refuse changes to runtime initialization order.
-File moves and logic extraction intentionally have no automatic fixer.
-
-Do not weaken rules or add broad ignores to make checks pass. Fix the structure;
-for a real exception, document its reason narrowly and add regression coverage
-when the rule must distinguish a valid pattern. Architectural judgment remains a
-review responsibility even when the mechanical checks pass.
-
-The implementation uses [ESLint's rule/fixer API](https://eslint.org/docs/latest/extend/custom-rules)
-and [RuleTester](https://eslint.org/docs/latest/integrate/nodejs-api#ruletester).
-The parser needs the JavaScript compiler API, so dependencies follow the official
-[TypeScript 6/7 side-by-side setup](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6.0):
-`typescript` supplies the TypeScript 6 compatibility API; `@typescript/native`
-supplies the TypeScript 7 `tsc` used in builds.
+- Renames refuse on collisions, exported bindings, default exports and `eval`.
+- `src/main.tsx` is exempt from ordering, constant and local-component naming.
+- No baselines. Don't weaken rules or add broad ignores: fix the structure, or
+  document a narrow exception and add a test for it.

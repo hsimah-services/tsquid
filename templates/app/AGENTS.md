@@ -1,56 +1,24 @@
 # AGENTS.md
 
-Guidance for AI coding agents working in this app.
-
 ## tsquid
 
-This app is built with [tsquid](https://github.com/hsimah-services/tsquid): typed
-routes, Relay entrypoints, and Astryx components styled with StyleX.
-
-**Read the UI standards first:**
-`node_modules/@tsquid/eslint-plugin/docs/ui-standards.md`. They are mandatory for
-handwritten code in `src/`, and take precedence over conflicting generated advice
-below. In particular, this app DOES compile StyleX: use `stylex.create`,
-`stylex.props`, and Astryx's `xstyle`. The Astryx block's claim that there is no
-StyleX compiler does not apply here.
-
-### Routes
-
-- Routes are declared in `routes.json`. After changing it, run `pnpm routes`.
-  Never edit `src/routes/__generated__/`.
-- Each route belongs to an entrypoint module,
-  `src/components/<entity>/<Entity>.entrypoint.ts`. Its `getPreloadProps` names the
-  queries to load, and the generator derives `use<Entity>RouteContext()` from the
-  filename.
-- A new route also needs:
-  - a `defineRoute` call in `src/routes/<entity>Routes.ts`;
-  - an entry in `src/app/router.tsx`;
-  - an entry in the `createLink` list in `src/app/AppLink.tsx`, so links to it preload.
-- Link to a route with `<Route>URI.getURI(input)`; never hand-write URL strings.
-  Change the current URL with `updateURI(patch)` from the active route context.
-- Route input holds only URL values (`string`, `int`, `bool`, arrays). Derive
-  richer types in the route's `getRouteType`.
-
-### Data
-
-- Pages read preloaded queries with `usePreloadedQuery`, inside the page's local
-  hook. Don't fetch in effects.
-- Relay mutations live in their own `use<Operation>Mutation.ts` files.
-- After changing any `graphql` tag, run `pnpm relay`. After the API changes, run
-  `pnpm schema` and then `pnpm relay`.
-
-### Commands
-
-There is no host Node. Run everything through `scripts/toolchain.sh`:
-
-```sh
-scripts/toolchain.sh pnpm check      # lint + architecture + Relay + typecheck + build
-scripts/toolchain.sh pnpm lint:fix   # safe automatic fixes
-scripts/toolchain.sh pnpm routes     # regenerate typed routes
-```
-
-Run `pnpm check` before finishing. Don't disable lint rules or add broad ignores
-to make checks pass.
+- Follow `node_modules/@tsquid/eslint-plugin/docs/ui-standards.md`. It overrides
+  the Astryx block below where they conflict. StyleX is compiled here: use
+  `stylex.create`, `stylex.props` and `xstyle`.
+- Routes live in `routes.json`; run `pnpm routes` after editing it. Never edit
+  `__generated__/`.
+- One entrypoint per entity: `src/components/<entity>/<Entity>.entrypoint.ts`.
+  `getPreloadProps` declares its queries, and the filename determines
+  `use<Entity>RouteContext()`.
+- A new route also needs `defineRoute` in `src/routes/<entity>Routes.ts`, plus
+  entries in `src/app/router.tsx` and the `createLink` list in `src/app/AppLink.tsx`.
+- Link with `<Route>URI.getURI(input)`; change the current URL with
+  `updateURI(patch)`. Never hand-write URLs.
+- Pages read queries with `usePreloadedQuery` inside a local hook. Mutations go
+  in `use<Operation>Mutation.ts`. Run `pnpm relay` after changing GraphQL, and
+  `pnpm schema` when the API changes.
+- Run everything through `scripts/toolchain.sh` (no host Node). `pnpm check` must
+  pass. Don't disable rules.
 
 <!-- ASTRYX:START -->
 Astryx v0.6.0 · 163 components
