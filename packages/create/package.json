@@ -1,0 +1,41 @@
+{
+  "name": "@tsquid/create",
+  "version": "0.1.1",
+  "description": "Create a tsquid app: pnpm create @tsquid <directory>.",
+  "keywords": [
+    "tsquid",
+    "create",
+    "starter",
+    "react",
+    "relay"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hsimah-services/tsquid.git",
+    "directory": "packages/create"
+  },
+  "homepage": "https://github.com/hsimah-services/tsquid/tree/main/packages/create#readme",
+  "bugs": "https://github.com/hsimah-services/tsquid/issues",
+  "type": "module",
+  "bin": {
+    "create-tsquid": "./bin/create-tsquid.mjs"
+  },
+  "files": [
+    "bin",
+    "template",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build-template.mjs",
+    "prepack": "pnpm build",
+    "test": "pnpm build && node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

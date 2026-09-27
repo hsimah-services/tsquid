@@ -3,7 +3,7 @@
 about:
   what: opinionated React framework on strongly typed route context
   stack: React 19, React Router 8, Relay 21, Astryx 0.6 (theme-neutral), StyleX 0.19, Vite 8
-  npm: "@tsquid/{routes,codegen,vite,eslint-plugin}; first published 2026-09-27; versions in packages/*/package.json"
+  npm: "@tsquid/{routes,codegen,vite,eslint-plugin,create}; first published 2026-09-27; versions in packages/*/package.json"
 
 layout:
   Cargo.toml: cargo workspace, crates/*
@@ -38,22 +38,26 @@ layout:
       bin/: tsquid-check-architecture (src/components graph)
       docs/ui-standards.md: the UI standards
       test/: RuleTester + architecture
+    create/:
+      bin/create-tsquid.mjs: "<dir>: copy template/, rename gitignore, chmod scripts, set name/title"
+      scripts/build-template.mjs: templates/app -> template/ (gitignored); pins ^versions, packageManager, pnpm-workspace.yaml
+      test/: created app shape, pins, exec bits, refusals
+      pack-gotchas: npm drops .gitignore; exec bits not preserved
     shared: Apache-2.0, repository.directory, public access, files[], LICENSE symlink (pack resolves)
 
   templates/:
     app/:
-      what: starter; workspace member (CI runs its check); copied by create-app.sh
+      what: starter; workspace member (CI runs its check); packed into @tsquid/create
       routes: Home (/) static, Profile (/me) + ProfileQuery
       schema.graphql: placeholder
       src/: app/ (providers, router, AppLink), relay/, routes/ (+ __generated__), components/{navigation,home,profile}
       docker: node 22 + pnpm
       scripts/: toolchain.sh (TOOLCHAIN_PUBLISH), dev.sh, fetch-schema.mjs
       AGENTS.md: tsquid rules + generated ASTRYX block
-      no pnpm-workspace.yaml: would split the workspace; create-app writes one
+      no pnpm-workspace.yaml: would split the workspace; build-template writes one
 
   scripts/:
     toolchain.sh: container runner (image tsquid-toolchain:3)
-    create-app.sh: copy starter, pin ^versions, rename
     publish.mjs: "[--dry-run] pack + npm stage publish versions not on npm; tries all, reports failures"
   .docker/Dockerfile: rust:1 + wasm32 target + node 22 + npm 11 + pnpm 12.4.1
   .github/workflows/:
@@ -65,7 +69,7 @@ commands: # via scripts/toolchain.sh
   install: pnpm install --frozen-lockfile
   routes: pnpm routes (fixture + starter)
   publish-dry-run: node scripts/publish.mjs --dry-run
-  new-app: scripts/create-app.sh ../my-app (host)
+  new-app: pnpm create @tsquid my-app
 
 conventions:
   generated-output: committed
@@ -74,9 +78,10 @@ conventions:
   container:
     - pnpm 12 reads pnpm_config_*, not npm_config_*
     - HOME=/tmp; COREPACK_HOME + XDG_DATA_HOME pinned in image
+    - new dependency-free package missing from lockfile (frozen fails, install says up to date): rm node_modules/.modules.yaml node_modules/.pnpm/lock.yaml, reinstall
 
 todo:
-  - "@tsquid/create (`pnpm create @tsquid`), replacing create-app.sh"
+  - "@tsquid/create first publish is manual; then add its trusted publisher (stage only)"
   - changesets if manual bumps get tedious
   - astryx integration (templates/docs via astryx CLI)?
   - starter not browser-tested

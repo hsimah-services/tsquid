@@ -25,12 +25,14 @@ Stack: React 19, React Router 8, Relay 21, Astryx 0.6, StyleX 0.19, Vite 8.
 | [`@tsquid/codegen`](packages/codegen) | `tsquid-codegen` CLI |
 | [`@tsquid/vite`](packages/vite) | Vite preset |
 | [`@tsquid/eslint-plugin`](packages/eslint-plugin) | UI rules, architecture checker, [UI standards](packages/eslint-plugin/docs/ui-standards.md) |
+| [`@tsquid/create`](packages/create) | `pnpm create @tsquid` |
 
 ## New app
 
 ```sh
-scripts/create-app.sh ../my-app
-cd ../my-app
+pnpm create @tsquid my-app
+# no host Node: podman run --rm -v "$PWD:/w:z" -w /w docker.io/library/node:22-slim npx -y @tsquid/create my-app
+cd my-app
 scripts/toolchain.sh pnpm install
 scripts/dev.sh                     # :5173
 ```
@@ -69,7 +71,7 @@ scripts/toolchain.sh pnpm routes            # regenerate fixture + starter route
 crates/tsquid-codegen/       generator (Rust)
 crates/tsquid-codegen-wasm/  generator → WebAssembly for @tsquid/codegen
 packages/                    published packages
-templates/app/               starter; copied by scripts/create-app.sh
+templates/app/               starter; packed into @tsquid/create
 NOTES.yaml                   repo map
 ```
 
