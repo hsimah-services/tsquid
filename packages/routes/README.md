@@ -6,15 +6,17 @@ output, and its component/entrypoint definitions.
 
 ## Generate
 
-Invoke the generator with a config and an output path, relative to the working
-directory:
+The generator ships as [`@tsquid/codegen`](../codegen) (WebAssembly, so no Rust is
+needed). Install it as a dev dependency, then invoke it with a config and an output
+path, relative to the working directory:
 
 ```sh
 tsquid-codegen routes.json src/routes/__generated__/routes.ts
 tsquid-codegen routes.json src/routes/__generated__/routes.ts --check
 ```
 
-Within this repo, run `cargo run -p tsquid-codegen -- …` in place of `tsquid-codegen`.
+The native binary (`cargo run -p tsquid-codegen -- …` in this repo) takes the
+same arguments and produces identical output.
 
 `--check` fails when committed output differs. The generator validates the whole
 schema before writing one deterministic output file. No Node, React, GraphQL, or

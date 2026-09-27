@@ -1,0 +1,16 @@
+# Placeholder so the starter compiles. Replace it with your API's schema:
+#   GRAPHQL_SCHEMA_ENDPOINT=http://localhost:4000/graphql pnpm schema
+
+type Query {
+  node(id: ID!): Node
+  viewer: Viewer
+}
+
+interface Node {
+  id: ID!
+}
+
+type Viewer implements Node {
+  id: ID!
+  name: String!
+}

@@ -2,8 +2,8 @@ import { createContext, Suspense, useContext, useEffect, useMemo, type ReactNode
 import { EntryPointContainer, fetchQuery, useEntryPointLoader, useRelayEnvironment, type PreloadedQuery, type ThinQueryParams, type JSResourceReference } from 'react-relay';
 import { createOperationDescriptor, getRequest, type IEnvironment, type OperationType } from 'relay-runtime';
 import { useLocation } from 'react-router';
-import type { URI } from './uri';
-import type { RouteContext } from './context';
+import type { URI } from './uri.js';
+import type { RouteContext } from './context.js';
 
 // Structural types avoid Relay 21's circular EntryPoint declaration (rejected by TS7).
 // They describe the same public Relay contract; casts are confined to hook/container adapters.

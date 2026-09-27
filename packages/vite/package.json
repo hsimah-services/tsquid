@@ -1,0 +1,48 @@
+{
+  "name": "@tsquid/vite",
+  "version": "0.1.0",
+  "description": "Vite preset for tsquid apps: StyleX, React and Relay in the right order.",
+  "keywords": [
+    "tsquid",
+    "vite",
+    "vite-plugin",
+    "stylex",
+    "relay"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hsimah-services/tsquid.git",
+    "directory": "packages/vite"
+  },
+  "homepage": "https://github.com/hsimah-services/tsquid/tree/main/packages/vite#readme",
+  "bugs": "https://github.com/hsimah-services/tsquid/issues",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.mjs"
+    }
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "unplugin-stylex": "^0.6.3",
+    "vite-plugin-relay": "^2.1.0"
+  },
+  "peerDependencies": {
+    "babel-plugin-relay": "^21.0.0",
+    "vite": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "index.mjs",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
