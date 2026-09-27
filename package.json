@@ -1,0 +1,18 @@
+{
+  "name": "@tsquid/routes",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./uri": "./runtime/uri.ts",
+    "./context": "./runtime/context.tsx",
+    "./entrypoint": "./runtime/entrypoint.tsx",
+    "./Link": "./runtime/Link.tsx"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-router": "^8.0.0",
+    "react-relay": "^21.0.0",
+    "relay-runtime": "^21.0.0"
+  }
+}
