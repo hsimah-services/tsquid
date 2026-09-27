@@ -95,6 +95,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tsquid-codegen-wasm"
+version = "0.1.0"
+dependencies = [
+ "tsquid-codegen",
+]
+
+[[package]]
 name = "unicode-ident"
 version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"

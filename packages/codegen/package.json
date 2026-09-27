@@ -1,0 +1,49 @@
+{
+  "name": "@tsquid/codegen",
+  "version": "0.1.0",
+  "description": "tsquid's route generator, compiled to WebAssembly: routes.json to typed TypeScript routes.",
+  "keywords": [
+    "tsquid",
+    "codegen",
+    "routes",
+    "typescript",
+    "webassembly"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hsimah-services/tsquid.git",
+    "directory": "packages/codegen"
+  },
+  "homepage": "https://github.com/hsimah-services/tsquid/tree/main/packages/codegen#readme",
+  "bugs": "https://github.com/hsimah-services/tsquid/issues",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.mjs"
+    }
+  },
+  "bin": {
+    "tsquid-codegen": "./bin/tsquid-codegen.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "index.mjs",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "cargo build --release --locked -p tsquid-codegen-wasm --target wasm32-unknown-unknown && mkdir -p dist && cp ../../target/wasm32-unknown-unknown/release/tsquid_codegen_wasm.wasm dist/tsquid-codegen.wasm",
+    "prepack": "pnpm build",
+    "test": "pnpm build && node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link as RouterLink, useHref, type LinkProps } from 'react-router';
 import { useRelayEnvironment } from 'react-relay';
 import type { IEnvironment } from 'relay-runtime';
-import { normalizePathname } from './uri';
+import { normalizePathname } from './uri.js';
 
 export type PreloadRoute = { path: string; preload(environment: IEnvironment, uri: string): () => void };
 

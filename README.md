@@ -26,12 +26,11 @@ deliberately opinionated about how a web application is navigated:
 ## Status
 
 Early. Extracted from [toroid](https://github.com/hsimah-services/toroid), which
-is still its only production user. Nothing is published yet; apps depend on the
-packages from GitHub.
+is still its only production user. Packages are published to npm under `@tsquid`.
 
 | Piece | Where | What it is |
 | --- | --- | --- |
-| `tsquid-codegen` | `crates/tsquid-codegen` | Rust route generator; build from source |
+| `@tsquid/codegen` | `packages/codegen` | Route generator (`tsquid-codegen` CLI), Rust compiled to WebAssembly |
 | `@tsquid/routes` | `packages/routes` | Route runtime: URIs, route context, Relay entrypoints, preloading links |
 | `@tsquid/vite` | `packages/vite` | Vite preset: StyleX, React, Relay, with dedupe for singletons |
 | `@tsquid/eslint-plugin` | `packages/eslint-plugin` | UI rules, architecture checker, and the [UI standards](packages/eslint-plugin/docs/ui-standards.md) |
@@ -52,10 +51,10 @@ The new app comes with:
 - a navigation shell and two routes: a static Home page, and a Profile page that
   preloads a Relay query;
 - lint rules and an architecture check;
-- its own container toolchain, whose image includes `tsquid-codegen`.
+- its own container toolchain (Node and pnpm only).
 
-Its README covers adding routes. Pass `--branch <name>` to build against a tsquid
-branch other than `main`.
+It depends on the `@tsquid` packages at this checkout's versions. Its README covers
+adding routes.
 
 ## At a glance
 
@@ -98,12 +97,15 @@ The full config format and runtime API (`defineRoute`, `RouteEntryPoint`,
 ## Repository layout
 
 ```
-crates/tsquid-codegen/   Rust generator: routes.json → one TypeScript file
+crates/tsquid-codegen/   Rust generator: routes.json → one TypeScript file (library + CLI)
+crates/tsquid-codegen-wasm/  the generator as a WebAssembly module for @tsquid/codegen
+packages/codegen/        @tsquid/codegen: the WASM module, generate(), tsquid-codegen CLI
 packages/routes/         @tsquid/routes runtime (TS source) + its tests and fixtures
 packages/vite/           @tsquid/vite preset
 packages/eslint-plugin/  @tsquid/eslint-plugin rules, architecture checker, UI standards
 templates/app/           starter app; a workspace member, so CI builds it
 scripts/create-app.sh    copies the starter into a new app
+scripts/publish.mjs      publishes package versions not yet on npm (release workflow)
 scripts/toolchain.sh     runs any command in the Rust + Node toolchain container
 .docker/                 toolchain image
 NOTES.yaml               terse per-folder notes; the most detailed map of the repo
@@ -123,6 +125,13 @@ scripts/toolchain.sh bash                  # shell in the toolchain
 
 CI (`.github/workflows/check.yml`) runs the same commands. It also checks that the
 committed generator output for the test fixture and the starter is up to date.
+
+## Releasing
+
+1. Bump `version` in each changed `packages/*/package.json` and merge to `main`.
+2. Run the **Release** workflow from the Actions tab. It tests, then publishes every
+   package version that isn't on npm yet, using npm trusted publishing with
+   provenance.
 
 ## License
 

@@ -1,7 +1,23 @@
 {
   "name": "@tsquid/routes",
   "version": "0.1.0",
-  "private": true,
+  "description": "Typed routes for React Router and Relay entrypoints: URI builders, route context, and preloading links.",
+  "keywords": [
+    "tsquid",
+    "react",
+    "react-router",
+    "relay",
+    "routing",
+    "typescript"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hsimah-services/tsquid.git",
+    "directory": "packages/routes"
+  },
+  "homepage": "https://github.com/hsimah-services/tsquid/tree/main/packages/routes#readme",
+  "bugs": "https://github.com/hsimah-services/tsquid/issues",
   "type": "module",
   "exports": {
     "./uri": "./runtime/uri.ts",
@@ -10,6 +26,8 @@
     "./Link": "./runtime/Link.tsx"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm build",
     "typecheck": "tsc --noEmit -p .",
     "test": "pnpm typecheck && node tests/run.mjs"
   },
@@ -29,5 +47,34 @@
     "react-router": "^8.3.1",
     "relay-runtime": "^21.0.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      "./uri": {
+        "types": "./dist/uri.d.ts",
+        "default": "./dist/uri.js"
+      },
+      "./context": {
+        "types": "./dist/context.d.ts",
+        "default": "./dist/context.js"
+      },
+      "./entrypoint": {
+        "types": "./dist/entrypoint.d.ts",
+        "default": "./dist/entrypoint.js"
+      },
+      "./Link": {
+        "types": "./dist/Link.d.ts",
+        "default": "./dist/Link.js"
+      }
+    }
   }
 }
