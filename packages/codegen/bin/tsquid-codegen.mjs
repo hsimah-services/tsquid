@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// Same interface as the native crates/tsquid-codegen binary.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { generate } from '../index.mjs';

@@ -11,7 +11,7 @@ const FIXTURES = fileURLToPath(new URL('../../routes/tests/', import.meta.url));
 const CLI = fileURLToPath(new URL('../bin/tsquid-codegen.mjs', import.meta.url));
 const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
 
-test('WebAssembly output matches the native generator fixture', () => {
+test('output matches the generator fixture', () => {
   assert.equal(generate(readFileSync(join(FIXTURES, 'routes.json'), 'utf8')), readFileSync(join(FIXTURES, 'routes.generated.ts'), 'utf8'));
 });
 test('invalid configs throw the generator error', () => {

@@ -5,7 +5,10 @@
   "packageManager": "pnpm@12.4.1",
   "scripts": {
     "test": "pnpm -r test",
-    "routes:template": "pnpm --filter @tsquid/codegen build && pnpm --filter tsquid-app routes",
+    "routes": "pnpm --filter @tsquid/codegen build && tsquid-codegen packages/routes/tests/routes.json packages/routes/tests/routes.generated.ts && pnpm --filter tsquid-app routes",
     "release": "node scripts/publish.mjs"
+  },
+  "devDependencies": {
+    "@tsquid/codegen": "workspace:*"
   }
 }

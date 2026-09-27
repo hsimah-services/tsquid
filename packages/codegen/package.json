@@ -1,7 +1,7 @@
 {
   "name": "@tsquid/codegen",
-  "version": "0.1.0",
-  "description": "tsquid's route generator, compiled to WebAssembly: routes.json to typed TypeScript routes.",
+  "version": "0.1.1",
+  "description": "Typed route generator for tsquid: routes.json to TypeScript.",
   "keywords": [
     "tsquid",
     "codegen",

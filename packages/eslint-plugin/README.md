@@ -1,8 +1,7 @@
 # @tsquid/eslint-plugin
 
-UI rules and an entity architecture checker for
-[tsquid](https://github.com/hsimah-services/tsquid) apps. The standards they enforce
-are in [docs/ui-standards.md](docs/ui-standards.md), which ships with the package.
+UI rules and an architecture checker for tsquid apps. Standards:
+[docs/ui-standards.md](docs/ui-standards.md).
 
 ```js
 // eslint.config.mjs
@@ -15,17 +14,17 @@ export default [...tsquid.configs.recommended];
 "lint": "eslint src --max-warnings 0 && tsquid-check-architecture"
 ```
 
-| Rule | Checks |
+| Rule | Enforces |
 | --- | --- |
-| `tsquid/module-order` | imports → constants → exports → local helpers → StyleX styles |
+| `tsquid/module-order` | imports → constants → exports → locals → StyleX |
 | `tsquid/constant-names` | module constants in `SHOUTING_SNAKE_CASE` |
 | `tsquid/module-exports` | named exports match the filename |
-| `tsquid/local-component-names` | local components are prefixed with their owner (`Owner_Part`) |
-| `tsquid/render-only-components` | effects, requests and transformations live in hooks/helpers |
+| `tsquid/local-component-names` | local components named `Owner_Part` |
+| `tsquid/render-only-components` | no effects, requests or transforms in components |
 
-`tsquid-check-architecture` checks the import graph under `src/components`:
-entity directories, `__private__` and feature-folder boundaries, and whether
-internal modules have real consumers.
-
-`recommended` also enables React's `rules-of-hooks` and `exhaustive-deps`, and
-exempts `src/main.tsx`, the imperative bootstrap, from the ordering and naming rules.
+- `tsquid-check-architecture` checks the import graph under `src/components`:
+  entity directories, `__private__` and feature-folder boundaries, and that
+  internal modules have real consumers.
+- `recommended` also enables `react-hooks/rules-of-hooks` and
+  `react-hooks/exhaustive-deps`, and exempts `src/main.tsx` from the ordering and
+  naming rules.

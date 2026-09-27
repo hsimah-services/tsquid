@@ -17,7 +17,6 @@ jobs:
         with:
           persist-credentials: false
       - run: cargo test --locked
-      - run: cargo run --locked -p tsquid-codegen -- packages/routes/tests/routes.json packages/routes/tests/routes.generated.ts --check
   # Package tests, plus the starter app's full check (lint, Relay, typecheck, build).
   packages:
     runs-on: ubuntu-latest
@@ -36,5 +35,4 @@ jobs:
       - run: rustup target add wasm32-unknown-unknown
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
-      # Uses @tsquid/codegen (WebAssembly), which pnpm test just built.
       - run: pnpm --filter tsquid-app routes:check

@@ -1,135 +1,84 @@
-# tsquid: proto-documentation. Terse; update alongside the code.
+# tsquid repo map. Terse; update alongside the code.
 
 about:
-  what: opinionated UI framework built on strongly typed route context
+  what: opinionated React framework on strongly typed route context
   stack: React 19, React Router 8, Relay 21, Astryx 0.6 (theme-neutral), StyleX 0.19, Vite 8
-  mechanism: routes.json -> generated TS (rust) + hand-written TS runtime
-  pieces: typed routes as Relay entrypoints; vite preset; eslint rules + architecture check; starter app
-  origin: hsimah-services/toroid client/tsquid, history imported at toroid ee9ff2a
-  consumer: toroid client (still uses its in-tree copy via link:./tsquid)
-  npm: "@tsquid org (owned by hsimah's npm account); packages routes, vite, eslint-plugin, codegen"
+  npm: "@tsquid/{routes,codegen,vite,eslint-plugin}; first published 2026-09-27; versions in packages/*/package.json"
 
 layout:
-  Cargo.toml: cargo workspace, members crates/*
-  Cargo.lock: workspace lockfile (shared by all crates)
-  package.json: pnpm workspace root; test (pnpm -r test), routes:template
-  pnpm-workspace.yaml: packages/* + templates/*; allowBuilds for astryx postinstall
-  tsconfig.base.json: shared compiler options; packages extend it
-  NOTES.yaml: this file
-  README.md: framework opinions, status table, quick example, dev commands
-  AGENTS.md: agent guidance; framework invariants, conventions, toolchain
-  CLAUDE.md: imports AGENTS.md (@AGENTS.md)
+  Cargo.toml: cargo workspace, crates/*
+  package.json: pnpm root; scripts test, routes, release; devDep @tsquid/codegen (for routes)
+  pnpm-workspace.yaml: packages/*, templates/*; allowBuilds astryx
+  tsconfig.base.json: shared compiler options
+  README.md / AGENTS.md / CLAUDE.md: overview / agent rules / imports AGENTS.md
 
   crates/:
     tsquid-codegen/:
-      what: routes generator binary; routes.json -> one .ts file
-      src/main.rs: whole generator + unit tests (single file for now)
-      deps: serde, serde_json only
-      usage: tsquid-codegen CONFIG.json OUTPUT.ts [--check]
-      src/lib.rs: generate_json(&str) + validation + unit tests
-      src/main.rs: native CLI over the lib
-      tests: read fixtures from packages/routes/tests (relative include_str!)
+      src/lib.rs: generate_json(&str) -> Result<String, String>; validation; unit tests
+      tests: include_str! fixtures from packages/routes/tests
     tsquid-codegen-wasm/:
-      what: cdylib for wasm32-unknown-unknown; no I/O, no wasi
-      abi: alloc/dealloc, generate(ptr,len)->1|0, result_ptr/result_len (output or error)
-      why-not-wasi: node:wasi warns ExperimentalWarning + sandbox remaps paths silently
+      what: cdylib, wasm32-unknown-unknown, no I/O
+      abi: alloc, dealloc, generate(ptr,len) -> 1|0, result_ptr, result_len
 
   packages/:
     routes/:
-      what: "@tsquid/routes: runtime imported by generated code + apps"
-      shipped-as: TS source in-repo; published as dist/ (.js + .d.ts) via publishConfig.exports
-      build: tsc -p tsconfig.build.json (TS7 emit); runs on prepack
-      imports: relative imports use .js extensions so emitted ESM runs in node
-      runtime/:
-        uri.ts: createURI; getURI/parseURI; strict field kinds
-        context.tsx: createRouteContextRegistry; one shared context per catalogue
-        entrypoint.tsx: defineRoute, RouteEntryPoint types, preloadEntryPoint, resource
-        Link.tsx: createLink; hover/focus Relay preload, 30s release
-      tests/:
-        routes.json: fixture config (runtime "../runtime")
-        routes.generated.ts: generator output for fixture; checked by cargo test + CI --check
-        types.ts: type-level tests (@ts-expect-error); run by tsc
-        run.mjs: transpiles runtime with TS6 JS API, then runs runtime.test.mjs
-        runtime.test.mjs: node:test runtime tests
-      README.md: user-facing docs for config format + runtime API
-    vite/:
-      what: "@tsquid/vite: tsquid() -> vite plugins"
-      index.mjs: stylex (unplugin-stylex) -> react -> relay; dedupe react/relay/router/astryx; injects `var global = globalThis`
-      index.d.ts: types for tsquid()
-      why-order: plugin-react 6 uses oxc, not babel; stylex must see source first
-    eslint-plugin/:
-      what: "@tsquid/eslint-plugin: UI rules + architecture checker (from toroid client/eslint)"
-      src/index.mjs: plugin; configs.recommended (flat config, rules as tsquid/*, main.tsx exception)
-      src/rules.mjs: module-order, constant-names, module-exports, local-component-names, render-only-components
-      src/check-architecture.mjs: auditArchitecture (entity dirs, __private__, feature owners, consumer counts)
-      bin/tsquid-check-architecture.mjs: CLI; checks <cwd>/src with components under src/components
-      docs/ui-standards.md: THE UI standards doc; ships in node_modules for apps
-      test/: RuleTester + architecture tests (node --test)
-
+      runtime/: uri.ts (createURI), context.tsx (registry), entrypoint.tsx (defineRoute, RouteEntryPoint, preloadEntryPoint, resource), Link.tsx (createLink)
+      publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
+      imports: relative, .js extensions
+      tests/: routes.json + routes.generated.ts (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs
     codegen/:
-      what: "@tsquid/codegen: tsquid-codegen CLI + generate() over the wasm module"
-      build: cargo build -p tsquid-codegen-wasm --target wasm32-unknown-unknown -> dist/tsquid-codegen.wasm (gitignored)
-      index.mjs: instantiate once, copy config in, read result out
-      bin/tsquid-codegen.mjs: same args/messages as native CLI
-      test/: wasm output == native fixture; errors; CLI write/--check
-    all-published:
-      metadata: license Apache-2.0, repository.directory, publishConfig.access public, files
-      LICENSE: symlink to ../../LICENSE; pnpm pack copies the real file
+      index.mjs: generate(); instantiates dist/tsquid-codegen.wasm once
+      bin/tsquid-codegen.mjs: CONFIG OUTPUT [--check]
+      build: cargo build tsquid-codegen-wasm -> dist/ (gitignored); runs in test + prepack
+      test/: fixture parity, errors, CLI
+    vite/:
+      index.mjs: tsquid() = stylex -> react -> relay + dedupe + global shim
+    eslint-plugin/:
+      src/: index.mjs (configs.recommended), rules.mjs, check-architecture.mjs
+      bin/: tsquid-check-architecture (src/components graph)
+      docs/ui-standards.md: the UI standards
+      test/: RuleTester + architecture
+    shared: Apache-2.0, repository.directory, public access, files[], LICENSE symlink (pack resolves)
 
   templates/:
     app/:
-      what: starter app copied by scripts/create-app.sh; workspace member so CI checks it
-      deps: "@tsquid/* as workspace:*; create-app rewrites to ^<version> from packages/<name>"
-      routes.json: Home (/) static, Profile (/me) with ProfileQuery
-      schema.graphql: placeholder (Query.viewer); apps replace via pnpm schema
-      src/app/: App (Relay env, Astryx Theme, LinkProvider->AppLink), router, AppLink (createLink preloading)
-      src/relay/environment.ts: plain fetch to /graphql
-      src/routes/: <entity>Routes.ts defineRoute; __generated__/routes.ts from codegen (committed)
-      src/components/: navigation (AppShell+SideNav), home, profile (+ relay __generated__, committed)
-      .docker/Dockerfile: node 22 + pnpm only (codegen comes from npm)
-      scripts/: toolchain.sh (container runner; TOOLCHAIN_PUBLISH for ports), dev.sh (5173), fetch-schema.mjs
-      AGENTS.md: tsquid guidance + generated ASTRYX block (astryx init --features agents)
-      no-pnpm-workspace.yaml: would make it its own workspace root; create-app writes one
+      what: starter; workspace member (CI runs its check); copied by create-app.sh
+      routes: Home (/) static, Profile (/me) + ProfileQuery
+      schema.graphql: placeholder
+      src/: app/ (providers, router, AppLink), relay/, routes/ (+ __generated__), components/{navigation,home,profile}
+      docker: node 22 + pnpm
+      scripts/: toolchain.sh (TOOLCHAIN_PUBLISH), dev.sh, fetch-schema.mjs
+      AGENTS.md: tsquid rules + generated ASTRYX block
+      no pnpm-workspace.yaml: would split the workspace; create-app writes one
 
   scripts/:
-    toolchain.sh: runs any command in the toolchain container (podman or docker)
-    create-app.sh: "<dir>: copy templates/app, pin @tsquid deps to ^version, rename, write pnpm-workspace.yaml"
-    publish.mjs: "[--dry-run] pnpm pack + npm publish for versions not on npm (npm view)"
-  .docker/:
-    Dockerfile: rust:1 + wasm32-unknown-unknown + node 22 + npm + pnpm 12.4.1 (corepack); image tsquid-toolchain:2
+    toolchain.sh: container runner (image tsquid-toolchain:2)
+    create-app.sh: copy starter, pin ^versions, rename
+    publish.mjs: "[--dry-run] pack + publish versions not on npm"
+  .docker/Dockerfile: rust:1 + wasm32 target + node 22 + npm + pnpm 12.4.1
   .github/workflows/:
-    check.yml: codegen job (cargo test, fixture --check) + packages job (pnpm test incl. template check, template routes:check via wasm)
-    release.yml: manual (workflow_dispatch, main only); npm >=11.5.1; trusted publishing (id-token) -> pnpm release
+    check.yml: cargo test; pnpm test; starter routes:check
+    release.yml: manual, main only, trusted publishing
 
-commands: # all via scripts/toolchain.sh; host has no rust/node
-  rust-tests: cargo test --locked
-  js-install: pnpm install --frozen-lockfile
-  js-tests: pnpm test
-  template-routes: pnpm routes:template (builds wasm, runs template's tsquid-codegen)
+commands: # via scripts/toolchain.sh
+  test: cargo test --locked && pnpm test
+  install: pnpm install --frozen-lockfile
+  routes: pnpm routes (fixture + starter)
   publish-dry-run: node scripts/publish.mjs --dry-run
-  new-app: scripts/create-app.sh ../my-app (host; no container needed)
-  regen-fixture: cargo run -p tsquid-codegen -- packages/routes/tests/routes.json packages/routes/tests/routes.generated.ts
-  shell: bash
+  new-app: scripts/create-app.sh ../my-app (host)
 
 conventions:
-  generated-output: committed; consumers don't need rust to build
-  typescript: # two installs per package
-    typescript: "@typescript/typescript6; JS API (transpileModule in run.mjs)"
-    "@typescript/native": typescript 7; provides tsc
-  toolchain-caches: $XDG_CACHE_HOME/tsquid/{pnpm-store,cargo}
-  container-gotchas:
+  generated-output: committed
+  typescript: typescript = TS6 (JS API); "@typescript/native" = TS7 (tsc)
+  caches: $XDG_CACHE_HOME/tsquid/{pnpm-store,cargo}
+  container:
     - pnpm 12 reads pnpm_config_*, not npm_config_*
-    - HOME is /tmp in container; COREPACK_HOME + XDG_DATA_HOME are pinned in the image
-    - pnpm needs git for github:...&path: deps (app image installs it)
-  non-routes-packages: plain .mjs (+ .d.ts), loaded by vite/eslint from node_modules without TS
+    - HOME=/tmp; COREPACK_HOME + XDG_DATA_HOME pinned in image
 
 todo:
-  - first publish is manual (npm login in toolchain container), then configure trusted publishing per package (workflow release.yml)
-  - "@tsquid/create for `pnpm create @tsquid` (replace scripts/create-app.sh)"
-  - changesets if manual version bumps get tedious
-  - switch toroid to published packages; remove its client/tsquid + routes CI job
-  - fixtures live in packages/routes; rethink if crate is published to crates.io
-  - switch toroid to @tsquid/vite + @tsquid/eslint-plugin; drop its client/eslint + docs/ui-standards.md
-  - make tsquid an Astryx integration (astryx.integration: templates/docs in the astryx CLI)?
-  - template not browser-tested at runtime yet (build + dev transforms verified only)
-  - vite build warns chunk > 500 kB (astryx bundle); consider code splitting
+  - trusted publisher per package (release.yml); publishing access = 2FA, no tokens
+  - "@tsquid/create (`pnpm create @tsquid`), replacing create-app.sh"
+  - changesets if manual bumps get tedious
+  - astryx integration (templates/docs via astryx CLI)?
+  - starter not browser-tested
+  - starter bundle > 500 kB (astryx); code splitting

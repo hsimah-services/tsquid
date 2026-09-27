@@ -1,6 +1,6 @@
 {
   "name": "@tsquid/routes",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Typed routes for React Router and Relay entrypoints: URI builders, route context, and preloading links.",
   "keywords": [
     "tsquid",

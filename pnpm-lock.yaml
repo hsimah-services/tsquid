@@ -164,7 +164,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@tsquid/codegen':
+        specifier: workspace:*
+        version: link:packages/codegen
 
   packages/codegen: {}
 
