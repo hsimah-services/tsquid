@@ -1,3 +1,5 @@
+![tsquid logo](https://github.com/hsimah-services/tsquid/blob/main/tsquid.png)
+
 # tsquid
 
 tsquid is a UI framework built around **strongly typed route context**. It is
