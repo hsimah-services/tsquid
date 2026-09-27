@@ -6,7 +6,7 @@ with StyleX.
 
 ## Running it
 
-The host needs only podman or docker. Node, pnpm and `tsquid-codegen` run in a
+The host needs only podman or docker. Node and pnpm run in a
 container, which is built on first use:
 
 ```sh

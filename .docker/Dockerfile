@@ -10,8 +10,12 @@ COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 ENV COREPACK_HOME=/usr/local/corepack XDG_DATA_HOME=/usr/local/share
 # Resolved at build time so containers never need the network just to run pnpm.
 RUN ln -s ../lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack \
+    && ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && corepack enable && corepack prepare pnpm@12.4.1 --activate \
     && pnpm --version \
     && chmod -R a+rX /usr/local/corepack /usr/local/share/pnpm
+
+# @tsquid/codegen compiles the generator to WebAssembly.
+RUN rustup target add wasm32-unknown-unknown
 
 WORKDIR /work/tsquid

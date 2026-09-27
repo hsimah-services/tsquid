@@ -4,7 +4,7 @@
 #
 #   scripts/toolchain.sh pnpm install
 #   scripts/toolchain.sh pnpm check
-#   scripts/toolchain.sh pnpm routes          # tsquid-codegen is in the image
+#   scripts/toolchain.sh pnpm routes          # regenerate typed routes
 #   scripts/toolchain.sh bash                 # interactive shell
 #
 # There is no host Node. The container is removed on exit (--rm). Set

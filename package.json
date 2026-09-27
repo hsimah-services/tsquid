@@ -5,6 +5,7 @@
   "packageManager": "pnpm@12.4.1",
   "scripts": {
     "test": "pnpm -r test",
-    "routes:template": "cargo run -q --locked -p tsquid-codegen -- templates/app/routes.json templates/app/src/routes/__generated__/routes.ts"
+    "routes:template": "pnpm --filter @tsquid/codegen build && pnpm --filter tsquid-app routes",
+    "release": "node scripts/publish.mjs"
   }
 }

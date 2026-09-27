@@ -1,7 +1,24 @@
 {
   "name": "@tsquid/eslint-plugin",
   "version": "0.1.0",
-  "private": true,
+  "description": "tsquid's UI rules and entity architecture checker for React + Relay + Astryx apps.",
+  "keywords": [
+    "tsquid",
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "react",
+    "stylex",
+    "astryx"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hsimah-services/tsquid.git",
+    "directory": "packages/eslint-plugin"
+  },
+  "homepage": "https://github.com/hsimah-services/tsquid/tree/main/packages/eslint-plugin#readme",
+  "bugs": "https://github.com/hsimah-services/tsquid/issues",
   "type": "module",
   "exports": {
     ".": "./src/index.mjs",
@@ -25,5 +42,18 @@
   "devDependencies": {
     "eslint": "^10.10.0",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin",
+    "src",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }
