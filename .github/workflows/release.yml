@@ -1,7 +1,7 @@
 name: Release
 
-# Run manually from the Actions tab. Publishes each package whose version isn't on
-# npm yet, using npm trusted publishing (no token; provenance is automatic).
+# Run manually from the Actions tab. Stages each package version not yet on npm, via
+# trusted publishing (no token; provenance is automatic). Approve with `npm stage approve`.
 on:
   workflow_dispatch:
 

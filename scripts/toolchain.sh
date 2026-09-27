@@ -14,7 +14,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-IMAGE="tsquid-toolchain:2"
+IMAGE="tsquid-toolchain:3"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tsquid"
 
 if command -v podman >/dev/null 2>&1; then
