@@ -48,15 +48,16 @@ Don't weaken these; raise the trade-off instead.
 - Never hand-edit generated output. Never delete an `@ts-expect-error` to make
   typecheck pass.
 - UI code follows `packages/eslint-plugin/docs/ui-standards.md`.
-- A package's name matches its directory (`create-app.sh` relies on it). Check
+- A package's name matches its directory (`@tsquid/create`'s build relies on it). Check
   `files` with `pnpm pack`.
 
 ## Starter (`templates/app`)
 
 - The reference app. It must pass `pnpm check`.
-- It depends on `workspace:*`; `create-app.sh` pins `^<version>`. It has no
-  `pnpm-workspace.yaml` (that would make it a separate workspace root);
-  `create-app.sh` writes one.
+- It depends on `workspace:*`. `packages/create/scripts/build-template.mjs` (run
+  on prepack) copies it into `@tsquid/create`, pins `^<version>`, adds
+  `packageManager` and `pnpm-workspace.yaml` (the repo copy can't have one: it would
+  split the workspace), and renames `.gitignore` to `gitignore`, which npm won't pack.
 - The Astryx block at the end of its `AGENTS.md` is generated: refresh it with
   `pnpm exec astryx init --features agents --agent-docs-path AGENTS.md`.
 
