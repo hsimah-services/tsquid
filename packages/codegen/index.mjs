@@ -3,19 +3,22 @@ import { readFileSync } from 'node:fs';
 const WASM = new URL('./dist/tsquid-codegen.wasm', import.meta.url);
 let exports;
 
-/** Validates a routes.json document and returns the generated TypeScript module. */
-export function generate(config) {
-  return call('generate', config);
+/**
+ * Validates a routes.json document and returns the generated TypeScript module.
+ * `persistedQueries` is the content of the file the config names, if any.
+ */
+export function generate(config, persistedQueries = null) {
+  return call('generate', config, persistedQueries);
 }
 
-/** Validates a routes.json document and returns the server manifest (JSON): every route, with its ssr flag. */
-export function manifest(config) {
-  return call('manifest', config);
+/** Validates like generate() and returns the server manifest (JSON). */
+export function manifest(config, persistedQueries = null) {
+  return call('manifest', config, persistedQueries);
 }
 
-function call(name, config) {
+function call(name, config, persistedQueries) {
   exports ??= new WebAssembly.Instance(new WebAssembly.Module(readFileSync(WASM))).exports;
-  const input = new TextEncoder().encode(config);
+  const input = new TextEncoder().encode(JSON.stringify({ config, persistedQueries }));
   const ptr = exports.alloc(input.length);
   new Uint8Array(exports.memory.buffer, ptr, input.length).set(input);
   const ok = exports[name](ptr, input.length);

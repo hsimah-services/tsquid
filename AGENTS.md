@@ -25,8 +25,10 @@ scripts/toolchain.sh pnpm routes    # regenerate fixture + starter routes after 
 
 Don't weaken these; raise the trade-off instead.
 
-- The generator reads `routes.json` only; it never parses application TS.
-  Behaviour (`getRouteType`, `getPreloadProps`) stays in TS.
+- The generator reads `routes.json` and Relay's persisted queries; it never reads
+  application TS. Behaviour (`getRouteType`, `getPreloadProps`) stays in TS. A
+  route's server `query` binds variables to same-named URL fields only; anything
+  richer is client-only.
 - Generator output is deterministic (ordered collections) and all-or-nothing
   (validate everything, then emit).
 - URL input kinds are `string` / `int` / `bool` and arrays of them. Parsing throws;

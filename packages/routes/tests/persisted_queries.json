@@ -1,0 +1,4 @@
+{
+  "3f1c2b9e8d7a6c5b4a39281706f5e4d3": "query TutorialDetailQuery(\n  $id: ID!\n  $first: Int = 10\n  $after: String\n  $order: ChapterOrder = POSITION\n) {\n  tutorial(id: $id) {\n    id\n    title\n    chapters(first: $first, after: $after, order: $order) {\n      id\n    }\n  }\n}\n",
+  "9a8b7c6d5e4f30211234567890abcdef": "query PlaylistsQuery {\n  playlists {\n    id\n  }\n}\n"
+}

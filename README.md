@@ -13,9 +13,10 @@ An opinionated React framework built on strongly typed route context.
   route context can `updateURI(patch)`.
 - **Relay entrypoints.** Each route preloads its query graph on navigation, and
   links preload it on hover and focus.
-- **Initial data.** A generated manifest tells any server which URLs are routes.
-  The server inlines the GraphQL responses as `#tsquid-data`, and the first route
-  renders without a request. Server side:
+- **Initial data.** A route can name one Relay query whose variables come from
+  its URL. A generated manifest gives any server the URL patterns, query text and
+  variable bindings. The server inlines the response as `#tsquid-data`, and the
+  route renders without waiting on it. Server side:
   [`skills/tsquid-server-integration`](skills/tsquid-server-integration).
 - **Astryx + StyleX** for all UI.
 

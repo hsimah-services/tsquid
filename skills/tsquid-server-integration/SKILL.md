@@ -1,16 +1,20 @@
 ---
 name: tsquid-server-integration
-description: Build or change a server, in any language, that serves a tsquid app's HTML and inlines the initial route's GraphQL responses as #tsquid-data. Covers matching URLs against routes.manifest.json, mapping routes to Relay operations and variables, executing them, and the payload format. Use for any work on that server-side integration or on debugging #tsquid-data warnings.
+description: Build or change a server, in any language, that serves a tsquid app's HTML and inlines the initial route's GraphQL response as #tsquid-data. Covers matching URLs against routes.manifest.json, building the route query's variables, executing it, and the payload format. Use for any work on that server-side integration or on debugging #tsquid-data warnings.
 ---
 
 # tsquid server integration
 
 tsquid apps render on the client. A server that serves the app's HTML can run the
-initial route's GraphQL operations itself and inline the responses. The first
-route then renders with no request and no loading state.
+initial route's query itself and inline the response. The route then renders
+without waiting on that request.
 
-It is best-effort. No payload, or a partial one, falls back to client fetches.
-**A malformed payload stops the app from booting.**
+Everything the server needs is in the generated manifest: URL patterns, and per
+route at most one query whose variables come only from the URL. Anything else the
+page loads is fetched by the client and suspends where it's read.
+
+It is best-effort. No payload falls back to a client fetch. **A malformed payload
+stops the app from booting.**
 
 Sections marked *normative* must match the client exactly. `vectors.json`, next to
 this file, holds conformance cases. The tsquid repo tests them against the client:
@@ -20,21 +24,18 @@ run them in your server's tests too.
 
 | Input | Where | Gives |
 | --- | --- | --- |
-| Manifest | `<routes output>.manifest.json`; starter: `src/routes/__generated__/routes.manifest.json` | URL → route + input |
-| Route definitions | `defineRoute(...)` calls; starter: `src/routes/*Routes.ts` | `getRouteType`, entrypoint |
-| Entrypoints | `*.entrypoint.ts` → `getPreloadProps` | operations + variables per route |
-| Relay artifacts | `__generated__/<Operation>.graphql.ts` | `params.name`, `params.text`, `operation.argumentDefinitions` |
+| Manifest | `<routes output>.manifest.json`; starter: `src/routes/__generated__/routes.manifest.json` | URL → route + input → query + variables |
 | HTML shell | the built `index.html` | where the payload goes |
 
-The manifest and the artifacts are generated and committed. Read them at build or
-deploy time. Don't copy them by hand.
+The manifest is generated and committed. Read it at build or deploy time; don't
+copy from it by hand. It changes whenever routes or route queries change.
 
 ## Per request
 
 1. Match the URL (path + query; the fragment never reaches the server). No match,
-   or `ssr: false`: serve the HTML unchanged.
-2. Map route + input → operations and variables.
-3. Execute them as the requesting user.
+   `ssr: false`, or no `query`: serve the HTML unchanged.
+2. Build the query's variables from the input.
+3. Execute the query as the requesting user.
 4. Inline the payload and serve. Send `Cache-Control: private` (or `no-store`)
    whenever a payload is inlined.
 
@@ -44,9 +45,15 @@ deploy time. Don't copy them by hand.
 {
   "version": 1,
   "routes": [
-    { "name": "Article", "path": "/articles/:id", "ssr": true, "fields": {
-      "id": { "kind": "string", "optional": false, "in": "path" },
-      "page": { "kind": "int", "optional": true, "in": "query" } } }
+    { "name": "Article", "path": "/articles/:id", "ssr": true,
+      "fields": {
+        "id": { "kind": "string", "optional": false, "in": "path" },
+        "page": { "kind": "int", "optional": true, "in": "query" } },
+      "query": {
+        "operation": "ArticleQuery", "id": "0e84be14…", "text": "query ArticleQuery($id: ID!, $page: Int = 1, $first: Int = 20, $after: String) { … }",
+        "variables": {
+          "after": {}, "first": { "default": 20 },
+          "id": { "input": "id" }, "page": { "input": "page", "default": 1 } } } }
   ]
 }
 ```
@@ -56,6 +63,13 @@ deploy time. Don't copy them by hand.
   outrank an SSR route) but get no payload.
 - `kind`: `string`, `int`, `bool`, or one of those plus `[]` (array). Path fields
   are required scalars.
+- `query` is optional. The generator guarantees it can run from the URL alone: a
+  `query` operation, no `@defer`/`@stream`, no provided variables, every required
+  variable bound to a required field or defaulted, and kinds compatible
+  (`int` → `Int`, `bool` → `Boolean`, `string` → other scalars and enums, `[]` →
+  lists).
+- `variables` lists every declared variable: `input` names the field that binds
+  it, `default` is the GraphQL default as JSON (enums as strings).
 
 ## 2. Matching (normative)
 
@@ -85,54 +99,38 @@ to another candidate, because the client renders an error for that URL.
 - `int`: matches `^-?[0-9]+$` and |n| ≤ 2⁵³−1. Anything else fails (`2.5`, `""`, `1e3`).
 - `bool`: exactly `true` or `false`. Anything else fails (`1`, `TRUE`).
 
-## 3. Route → operations
+## 3. Variables (normative)
 
-This mapping mirrors the app's TypeScript and is owned by the server. Derive it
-per route:
+For each entry in `query.variables`, in any order:
 
-1. `defineRoute({ uri, getRouteType, entryPoint })`: `route = getRouteType(input)`.
-2. `entryPoint.getPreloadProps(route)` returns:
-   - `queries.<key> = { parameters: <OperationNode>, variables }`: one operation.
-     Its name is `params.name` in the imported artifact (`ProfileQuery` from
-     `./__generated__/ProfileQuery.graphql`).
-   - `entryPoints.<key> = { entryPoint, entryPointParams }`: recurse with
-     `entryPointParams` as the route.
-3. Mirror any condition that includes or omits a key.
+1. `input` is set and the parsed input has that field: use its value.
+2. Otherwise, `default` is set: use it.
+3. Otherwise: omit the variable.
 
-Example (starter): `/me` → Profile → `getPreloadProps: () => ({ queries: { profile:
-{ parameters: PROFILE_QUERY_NODE, variables: {} } } })` → `[ProfileQuery, {}]`.
+Example: `/articles/7` → `{ "id": "7", "page": 1, "first": 20 }`.
 
-Keep the mapping as one table in the server, keyed by route `name`. Drift from the
-app shows up as client console warnings in dev (see [Debugging](#debugging)).
-Operations the server leaves out are fetched by the client.
+This is what Relay sends for the same URL. Matching against it ignores top-level
+`null`s and object key order. Array order and types matter: `1` ≠ `"1"`.
 
-## 4. Variables (normative)
+## 4. Executing
 
-For each variable declared in the artifact's `operation.argumentDefinitions`,
-Relay sends:
-
-- the value from `getPreloadProps`, if it isn't `null`/`undefined`;
-- otherwise `defaultValue`, which is `null` when there is no default.
-
-Undeclared variables are dropped. Send the same set:
-
-- Include defaults: `{ first: 10 }`, not `{}`.
-- Top-level `null`s may be omitted. Nested `null`s may not.
-- Object key order doesn't matter. Array order does. Types do: `1` ≠ `"1"`.
-- Provided variables (`__relay_internal__pv__*`) are declared like any other.
-  Include their value, if the server knows it, or leave the operation out.
-
-## 5. Executing
-
-- Send `params.text` verbatim. Relay adds `id` and `__typename` and inlines
-  fragments, so a hand-written equivalent won't normalise. If the app uses
-  persisted queries, send `params.id` the same way the client does.
+- Send `query.text` verbatim. Relay adds `id` and `__typename` and inlines
+  fragments, so a hand-written equivalent won't normalise. If the endpoint uses
+  persisted queries, send `query.id` instead, as the client does.
 - Execute as the browser would: same viewer, cookies and auth headers. Data for
   another viewer shows the wrong user's data until a refetch.
 - Inline the body as returned (`data`, `errors`, `extensions`). On a transport
-  failure or timeout, leave the operation out. Don't block the HTML on a slow
-  operation.
-- Leave out operations that use `@defer` or `@stream`.
+  failure or timeout, inline nothing. Don't block the HTML on a slow query.
+- `int` input is a safe integer (53-bit); GraphQL `Int` is 32-bit. Out-of-range
+  values come back as GraphQL `errors`, the same as on the client.
+
+## 5. Other operations
+
+Only the route query is guaranteed to match. Other queries the page makes, from
+nested entrypoints, components or client logic, are fetched by the client. A
+server may still inline more if it knows the exact operation and variables Relay
+will send (Relay's `params.text`, declared variables with defaults filled in). The
+manifest doesn't describe them, and drift only shows as [warnings](#debugging).
 
 ## 6. Payload (normative)
 
@@ -146,8 +144,8 @@ Undeclared variables are dropped. Send the same set:
   `readInitialData`), anywhere before the app's `<script type="module">` runs.
   The end of `<head>` works.
 - `{ version: 1, responses: [{ operation: string, variables: object, response:
-  object }] }`. No duplicate `operation` + variables (by the rules in §4).
-- Escape every `<` as `<`. Don't HTML-entity-encode: the client reads the
+  object }] }`. No duplicate `operation` + variables (by the rules in §3).
+- Escape every `<` as `\u003c`. Don't HTML-entity-encode: the client reads the
   raw `textContent`.
 - No match, nothing to inline: omit the element. `responses: []` is also valid.
 

@@ -41,7 +41,10 @@ tsquid-codegen routes.json src/routes/__generated__/routes.ts [--check]
 - `entryPoint` is a normalized path relative to the config, named
   `<Name>.entrypoint.ts`. Basenames must be unique.
 - `ssr` (default `true`): whether servers may inline initial data for the route.
-  See [Initial data](#initial-data).
+- `query` (optional): the Relay operation a server runs for the route. See
+  [Initial data](#initial-data).
+- `persistedQueries`: Relay's persisted-queries file, relative to the config.
+  Required when any route has a `query`.
 
 ## Generated API
 
@@ -124,16 +127,45 @@ const AppLink = createLink([ARTICLE_ROUTES.search, ...]);
 
 ## Initial data
 
-tsquid renders on the client. A server, in any language, can inline the initial
-route's GraphQL responses so it renders without a request. The server side is
-specified in the
+tsquid renders on the client. A server, in any language, can run a route's
+`query` and inline the response, so the route renders without waiting on it. The
+server side is specified in the
 [`tsquid-server-integration` skill](https://github.com/hsimah-services/tsquid/tree/main/skills/tsquid-server-integration),
 with conformance vectors.
 
-- `tsquid-codegen` writes `<output>.manifest.json` next to the generated module:
-  every route's path, fields and `ssr` flag.
-- The server inlines `{ version: 1, responses: [{ operation, variables, response }] }`
-  as `<script type="application/json" id="tsquid-data">`.
+```json
+{ "persistedQueries": "persisted_queries.json",
+  "routes": [{ "name": "Posts", "path": "/posts", "query": "PostsQuery", "fields": {
+    "order_by": { "kind": "string", "optional": true }, "preview_id": { "kind": "int", "optional": true } } }] }
+```
+
+- A route query's variables come from the URL only: each binds the field with the
+  same name, or falls back to its GraphQL default, or `null`. The generator
+  rejects queries that need anything else: required variables without a field,
+  incompatible kinds, `@defer`/`@stream`, provided variables, non-queries.
+- The entrypoint must preload that query with those variables:
+  `variables: { order_by: route.order_by, preview_id: route.preview_id }`.
+- Everything else the route loads (other queries, nested entrypoints, conditional
+  logic) is fetched by the client and suspends where it's read. Read it below its
+  own `<Suspense>` so the rest renders first. Keep the default `fetchPolicy`
+  (`store-or-network`): `store-and-network` refetches inlined data.
+- `tsquid-codegen` writes `<output>.manifest.json`: every route's path, fields,
+  `ssr` flag and resolved query (operation, id, text, variables with bindings and
+  defaults).
+
+Relay must persist operations to the file the config names, keeping query text:
+
+```json
+"persistConfig": { "file": "./persisted_queries.json", "include_query_text": true }
+```
+
+Relay only appends to that file, and skips unchanged operations. Regenerate it
+from empty, `echo {} > persisted_queries.json && relay-compiler --repersist`,
+before `tsquid-codegen`. The generator rejects an operation name with more than
+one version.
+
+The server inlines `{ version: 1, responses: [{ operation, variables, response }] }`
+as `<script type="application/json" id="tsquid-data">`.
 
 ```ts
 import { readInitialData, withInitialData } from '@tsquid/routes/initialData';
@@ -153,4 +185,4 @@ new Environment({
 - Variables match as Relay sends them: declared only, defaults included, top-level
   `null`s ignored, object key order ignored.
 - `warn` logs boot misses and expired entries, with the exact operation and
-  variables, so drift between the server and `getPreloadProps` shows.
+  variables, so drift between the server and the entrypoint shows.

@@ -8,8 +8,10 @@
 - Routes live in `routes.json`; run `pnpm routes` after editing it. Never edit
   `__generated__/` (route module + server manifest). `"ssr": false` stops servers
   inlining data for a route.
-- Changing a route's `getPreloadProps` or its query variables changes what an
-  inlining server must send: tell the server owners.
+- A route's `query` in `routes.json` is what servers inline. Its variables must be
+  same-named route fields, and the entrypoint must preload it with exactly those.
+  Read any other query under its own `<Suspense>`. After changing GraphQL, run
+  `pnpm relay` and then `pnpm routes`.
 - One entrypoint per entity: `src/components/<entity>/<Entity>.entrypoint.ts`.
   `getPreloadProps` declares its queries, and the filename determines
   `use<Entity>RouteContext()`.

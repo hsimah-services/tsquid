@@ -1,5 +1,6 @@
 //! The generator as a WebAssembly module for @tsquid/codegen. The host owns all I/O:
-//! it copies the config into memory from `alloc`, calls `generate` or `manifest`, then reads the
+//! it copies a request (`{"config", "persistedQueries"}` JSON) into memory from
+//! `alloc`, calls `generate` or `manifest`, then reads the
 //! output (or error message) from `result_ptr`/`result_len`.
 use std::cell::RefCell;
 

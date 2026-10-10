@@ -8,15 +8,18 @@ tsquid-codegen routes.json src/routes/__generated__/routes.ts
 tsquid-codegen routes.json src/routes/__generated__/routes.ts --check   # exit 1 if stale
 ```
 
-Writes `routes.ts` and `routes.manifest.json` (every route's path, fields and
-`ssr` flag, for servers), both or neither.
+Writes `routes.ts` and `routes.manifest.json` (every route's path, fields, `ssr`
+flag and resolved `query`, for servers), both or neither. Reads the Relay
+persisted-queries file named by `persistedQueries`, relative to the config.
 
 ```js
 import { generate, manifest } from '@tsquid/codegen';
 
-generate(configJson); // → TypeScript source; throws on an invalid config
-manifest(configJson); // → server manifest JSON; throws on an invalid config
+generate(configJson, persistedQueriesJson); // → TypeScript source; throws on an invalid config
+manifest(configJson, persistedQueriesJson); // → server manifest JSON; throws on an invalid config
 ```
+
+`persistedQueriesJson` is the file's content, or `null` when the config names none.
 
 Output is deterministic; commit it. The config and manifest formats are in the
 [`@tsquid/routes` README](https://www.npmjs.com/package/@tsquid/routes).

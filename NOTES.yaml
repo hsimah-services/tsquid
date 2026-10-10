@@ -14,11 +14,12 @@ layout:
 
   crates/:
     tsquid-codegen/:
-      src/lib.rs: generate_json / manifest_json (&str) -> Result<String, String>; validation; unit tests
+      src/lib.rs: "generate_json / manifest_json ({config, persistedQueries} JSON) -> Result<String, String>; validation (incl. route queries via graphql-parser); unit tests"
       tests: include_str! fixtures from packages/routes/tests
     tsquid-codegen-wasm/:
       what: cdylib, wasm32-unknown-unknown, no I/O
-      abi: alloc, dealloc, generate|manifest(ptr,len) -> 1|0, result_ptr, result_len
+      abi: alloc, dealloc, generate|manifest(ptr,len) -> 1|0, result_ptr, result_len; input {config, persistedQueries}
+      size: release profile opt-level s + lto (graphql-parser)
 
   packages/:
     routes/:
@@ -26,10 +27,10 @@ layout:
       initial-data: "#tsquid-data JSON {version 1, responses[{operation, variables, response}]}; network wrapper answers once, sync; expires after first request's task; Root loads in layout effect"
       publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
       imports: relative, .js extensions
-      tests/: routes.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (also checks skills/*/vectors.json)
+      tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (also checks skills/*/vectors.json)
     codegen/:
-      index.mjs: generate(), manifest(); instantiates dist/tsquid-codegen.wasm once
-      bin/tsquid-codegen.mjs: "CONFIG OUTPUT.ts [--check]; also writes OUTPUT.manifest.json (all routes + ssr flag, default true)"
+      index.mjs: generate(config, persisted), manifest(config, persisted); instantiates dist/tsquid-codegen.wasm once
+      bin/tsquid-codegen.mjs: "CONFIG OUTPUT.ts [--check]; reads config.persistedQueries; also writes OUTPUT.manifest.json (routes, ssr, resolved query)"
       build: cargo build tsquid-codegen-wasm -> dist/ (gitignored); runs in test + prepack
       test/: fixture parity, errors, CLI
     vite/:
@@ -49,7 +50,8 @@ layout:
   templates/:
     app/:
       what: starter; workspace member (CI runs its check); packed into @tsquid/create
-      routes: Home (/) static, Profile (/me) + ProfileQuery
+      routes: Home (/) static, Profile (/me) + ProfileQuery (route query)
+      relay: persistConfig persisted_queries.json (include_query_text); `relay` resets it + --repersist; run before `routes`
       schema.graphql: placeholder
       src/: app/ (providers, router, AppLink), relay/, routes/ (+ __generated__), components/{navigation,home,profile}
       docker: node 22 + pnpm
@@ -58,7 +60,7 @@ layout:
       no pnpm-workspace.yaml: would split the workspace; build-template writes one
 
   skills/:
-    tsquid-server-integration/: "SKILL.md: server spec (manifest matching, route -> operations, variables, payload); vectors.json: conformance, tested vs React Router + createURI + withInitialData"
+    tsquid-server-integration/: "SKILL.md: server spec (manifest matching, route query variables, payload); vectors.json: conformance, tested vs React Router + createURI + Relay variables + withInitialData"
 
   scripts/:
     toolchain.sh: container runner (image tsquid-toolchain:3)

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { generate, manifest } from '../index.mjs';
 
 const args = process.argv.slice(2);
@@ -10,8 +10,10 @@ try {
   }
   const [config, output, check] = args;
   const source = readFileSync(config, 'utf8');
+  const persisted = persistedQueriesPath(source);
+  const queries = persisted === null ? null : readFileSync(resolve(dirname(config), persisted), 'utf8');
   // Generate both before writing either: output is all-or-nothing.
-  const files = [[output, generate(source)], [output.replace(/\.ts$/, '') + '.manifest.json', manifest(source)]];
+  const files = [[output, generate(source, queries)], [output.replace(/\.ts$/, '') + '.manifest.json', manifest(source, queries)]];
   if (check) {
     if (files.some(([path, generated]) => read(path) !== generated)) throw new Error('Generated routes are stale; regenerate them');
   } else {
@@ -21,6 +23,14 @@ try {
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;
+}
+
+// The generator reports invalid configs; this only finds the file it needs.
+function persistedQueriesPath(source) {
+  try {
+    const path = JSON.parse(source).persistedQueries;
+    return typeof path === 'string' ? path : null;
+  } catch { return null; }
 }
 
 function read(path) {

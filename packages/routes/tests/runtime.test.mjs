@@ -188,7 +188,7 @@ test('context updates preserve unowned repeated keys and remove owned collection
 });
 
 const { readInitialData, withInitialData } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/initialData.mjs`));
-const { fetchQuery } = await import('relay-runtime');
+const { fetchQuery, createOperationDescriptor } = await import('relay-runtime');
 // Relay sends declared variables only: defaults filled in, null when unset.
 const argumentDefinitions = [{ kind: 'LocalArgument', name: 'id', defaultValue: null }, { kind: 'LocalArgument', name: 'b', defaultValue: null },
   { kind: 'LocalArgument', name: 'a', defaultValue: null }, { kind: 'LocalArgument', name: 'first', defaultValue: 10 }];
@@ -259,6 +259,7 @@ test('initial data is optional, read from #tsquid-data, and rejected when malfor
 
 // The server integration skill's vectors must describe what the client actually does:
 // React Router picks the route, then tsquid parses it; a parse error means no route.
+// A route query's server variables must match what Relay sends for the parsed input.
 const vectors = JSON.parse((await import('node:fs')).readFileSync(new URL('../../../skills/tsquid-server-integration/vectors.json', import.meta.url), 'utf8'));
 test('server integration vectors match client routing, parsing and variable matching', async (t) => {
   t.mock.method(console, 'warn', () => {});
@@ -271,6 +272,20 @@ test('server integration vectors match client routing, parsing and variable matc
     let actual = null;
     try { actual = match ? { route: match.id, input: match.uri.parseURI(url) } : null; } catch { actual = null; }
     assert.deepEqual(actual, expected === null ? null : { route: expected, input }, url);
+    const query = vectors.manifest.routes.find(route => route.name === expected)?.query;
+    if (!query) continue;
+    const server = {};
+    for (const [name, { input: field, default: value }] of Object.entries(query.variables)) {
+      if (field !== undefined && input[field] !== undefined) server[name] = input[field];
+      else if (value !== undefined) server[name] = value;
+    }
+    assert.deepEqual(server, vectors.urls.find(vector => vector.url === url).variables, url);
+    const argumentDefinitions = Object.entries(query.variables).map(([name, { default: value }]) => ({ kind: 'LocalArgument', name, defaultValue: value ?? null }));
+    const request = { ...variableQuery, operation: { ...variableQuery.operation, name: query.operation, argumentDefinitions }, params: { ...variableQuery.params, name: query.operation, cacheID: query.id } };
+    const sent = createOperationDescriptor(request, input).request.variables;
+    const response = { data: {} };
+    const fetchFn = withInitialData(() => null, { version: 1, responses: [{ operation: query.operation, variables: server, response }] });
+    assert.equal(fetchFn({ name: query.operation }, sent), response, `${url}: Relay sends ${JSON.stringify(sent)}`);
   }
   for (const { client, server, match } of vectors.variables) {
     const response = { data: {} };
