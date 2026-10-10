@@ -13,6 +13,11 @@ An opinionated React framework built on strongly typed route context.
   route context can `updateURI(patch)`.
 - **Relay entrypoints.** Each route preloads its query graph on navigation, and
   links preload it on hover and focus.
+- **Initial data.** A route can name one Relay query whose variables come from
+  its URL. A generated manifest gives any server the URL patterns, query text and
+  variable bindings. The server inlines the response as `#tsquid-data`, and the
+  route renders without waiting on it. Server side:
+  [`skills/tsquid-server-integration`](skills/tsquid-server-integration).
 - **Astryx + StyleX** for all UI.
 
 Stack: React 19, React Router 8, Relay 21, Astryx 0.6, StyleX 0.19, Vite 8.
@@ -21,7 +26,7 @@ Stack: React 19, React Router 8, Relay 21, Astryx 0.6, StyleX 0.19, Vite 8.
 
 | Package | |
 | --- | --- |
-| [`@tsquid/routes`](packages/routes) | Runtime: URIs, route context, entrypoints, preloading links |
+| [`@tsquid/routes`](packages/routes) | Runtime: URIs, route context, entrypoints, preloading links, initial data |
 | [`@tsquid/codegen`](packages/codegen) | `tsquid-codegen` CLI |
 | [`@tsquid/vite`](packages/vite) | Vite preset |
 | [`@tsquid/eslint-plugin`](packages/eslint-plugin) | UI rules, architecture checker, [UI standards](packages/eslint-plugin/docs/ui-standards.md) |
@@ -72,6 +77,7 @@ crates/tsquid-codegen/       generator (Rust)
 crates/tsquid-codegen-wasm/  generator → WebAssembly for @tsquid/codegen
 packages/                    published packages
 templates/app/               starter; packed into @tsquid/create
+skills/                      agent skills (copy into your agent's skills directory)
 NOTES.yaml                   repo map
 ```
 

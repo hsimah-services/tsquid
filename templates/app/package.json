@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "relay-compiler && tsc --noEmit && vite build",
+    "build": "pnpm relay && tsc --noEmit && vite build",
     "preview": "vite preview",
-    "relay": "relay-compiler",
-    "relay:watch": "relay-compiler --watch",
+    "relay": "echo {} > persisted_queries.json && relay-compiler --repersist",
+    "relay:watch": "echo {} > persisted_queries.json && relay-compiler --repersist --watch",
     "routes": "tsquid-codegen routes.json src/routes/__generated__/routes.ts",
     "routes:check": "tsquid-codegen routes.json src/routes/__generated__/routes.ts --check",
     "schema": "node scripts/fetch-schema.mjs",

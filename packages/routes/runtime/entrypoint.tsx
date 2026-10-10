@@ -1,4 +1,4 @@
-import { createContext, Suspense, useContext, useEffect, useMemo, type ReactNode, type ComponentType } from 'react';
+import { createContext, Suspense, useContext, useLayoutEffect, useMemo, type ReactNode, type ComponentType } from 'react';
 import { EntryPointContainer, fetchQuery, useEntryPointLoader, useRelayEnvironment, type PreloadedQuery, type ThinQueryParams, type JSResourceReference } from 'react-relay';
 import { createOperationDescriptor, getRequest, type IEnvironment, type OperationType } from 'relay-runtime';
 import { useLocation } from 'react-router';
@@ -63,7 +63,8 @@ export function defineRoute<I, R extends Record<string, unknown>, N extends stri
     const route = useMemo(() => config.getRouteType(input), [input]);
     const provider = useMemo(() => ({ getEnvironment: () => environment }), [environment]);
     const [reference, load] = useEntryPointLoader(provider, config.entryPoint) as unknown as [EntryPointReference<AnyEntryPoint> | null, (route: R) => void, () => void];
-    useEffect(() => { load(route); }, [load, route]);
+    // Before paint: a synchronous (preloaded or inlined) response skips the fallback.
+    useLayoutEffect(() => { load(route); }, [load, route]);
     const context = useMemo(() => ({ currentRoute: config.context.currentRoute, input, updateURI: (patch: Partial<I>) => getUpdatedURI(config.uri, uri, input, patch) }), [input, uri]);
     return <config.context.Context value={context}><RouteContext value={route}>
       <Suspense fallback={fallback}>{reference ? <RouteEntryPointContainer entryPointReference={reference} props={{}} /> : fallback}</Suspense>

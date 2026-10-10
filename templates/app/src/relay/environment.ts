@@ -1,7 +1,10 @@
 import { Environment, Network, RecordSource, Store, type FetchFunction } from 'relay-runtime';
+import { readInitialData, withInitialData } from '@tsquid/routes/initialData';
 
+// A server may inline the initial route's responses as #tsquid-data; see
+// src/routes/__generated__/routes.manifest.json.
 export const ENVIRONMENT = new Environment({
-  network: Network.create(fetchGraphQL),
+  network: Network.create(withInitialData(fetchGraphQL, readInitialData(), { warn: import.meta.env.DEV })),
   store: new Store(new RecordSource()),
 });
 

@@ -1,7 +1,8 @@
 {
   "runtime": "@tsquid/routes",
+  "persistedQueries": "persisted_queries.json",
   "routes": [
     { "name": "Home", "entryPoint": "src/components/home/Home.entrypoint.ts", "path": "/", "fields": {} },
-    { "name": "Profile", "entryPoint": "src/components/profile/Profile.entrypoint.ts", "path": "/me", "fields": {} }
+    { "name": "Profile", "entryPoint": "src/components/profile/Profile.entrypoint.ts", "path": "/me", "fields": {}, "query": "ProfileQuery" }
   ]
 }

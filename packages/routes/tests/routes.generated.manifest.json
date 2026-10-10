@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "name": "Tutorials",
+      "path": "/tutorials",
+      "ssr": true,
+      "fields": {
+        "filter": {
+          "kind": "string",
+          "optional": true,
+          "in": "query"
+        }
+      }
+    },
+    {
+      "name": "TutorialDetail",
+      "path": "/tutorials/:id",
+      "ssr": true,
+      "fields": {
+        "id": {
+          "kind": "string",
+          "optional": false,
+          "in": "path"
+        }
+      },
+      "query": {
+        "operation": "TutorialDetailQuery",
+        "id": "3f1c2b9e8d7a6c5b4a39281706f5e4d3",
+        "text": "query TutorialDetailQuery(\n  $id: ID!\n  $first: Int = 10\n  $after: String\n  $order: ChapterOrder = POSITION\n) {\n  tutorial(id: $id) {\n    id\n    title\n    chapters(first: $first, after: $after, order: $order) {\n      id\n    }\n  }\n}\n",
+        "variables": {
+          "after": {},
+          "first": {
+            "default": 10
+          },
+          "id": {
+            "input": "id"
+          },
+          "order": {
+            "default": "POSITION"
+          }
+        }
+      }
+    },
+    {
+      "name": "Playlists",
+      "path": "/playlists",
+      "ssr": false,
+      "fields": {}
+    }
+  ]
+}

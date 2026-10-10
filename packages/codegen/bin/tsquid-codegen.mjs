@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { generate } from '../index.mjs';
+import { dirname, resolve } from 'node:path';
+import { generate, manifest } from '../index.mjs';
 
 const args = process.argv.slice(2);
 try {
@@ -9,16 +9,28 @@ try {
     throw new Error('Usage: tsquid-codegen CONFIG.json OUTPUT.ts [--check]');
   }
   const [config, output, check] = args;
-  const generated = generate(readFileSync(config, 'utf8'));
+  const source = readFileSync(config, 'utf8');
+  const persisted = persistedQueriesPath(source);
+  const queries = persisted === null ? null : readFileSync(resolve(dirname(config), persisted), 'utf8');
+  // Generate both before writing either: output is all-or-nothing.
+  const files = [[output, generate(source, queries)], [output.replace(/\.ts$/, '') + '.manifest.json', manifest(source, queries)]];
   if (check) {
-    if (read(output) !== generated) throw new Error('Generated routes are stale; regenerate them');
+    if (files.some(([path, generated]) => read(path) !== generated)) throw new Error('Generated routes are stale; regenerate them');
   } else {
     mkdirSync(dirname(output), { recursive: true });
-    writeFileSync(output, generated);
+    for (const [path, generated] of files) writeFileSync(path, generated);
   }
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;
+}
+
+// The generator reports invalid configs; this only finds the file it needs.
+function persistedQueriesPath(source) {
+  try {
+    const path = JSON.parse(source).persistedQueries;
+    return typeof path === 'string' ? path : null;
+  } catch { return null; }
 }
 
 function read(path) {
