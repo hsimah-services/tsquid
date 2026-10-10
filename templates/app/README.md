@@ -13,7 +13,7 @@ Run commands as `scripts/toolchain.sh pnpm <cmd>`:
 | --- | --- |
 | `check` | lint + architecture + relay + tsc + build |
 | `lint`, `lint:fix` | eslint + `tsquid-check-architecture` |
-| `routes`, `routes:check` | generate / verify `src/routes/__generated__` |
+| `routes`, `routes:check` | generate / verify `src/routes/__generated__` (TS + server manifest) |
 | `relay` | compile `graphql` tags |
 | `schema` | introspect `GRAPHQL_SCHEMA_ENDPOINT` → `schema.graphql` (placeholder until run) |
 
@@ -24,5 +24,12 @@ Run commands as `scripts/toolchain.sh pnpm <cmd>`:
 3. Call `defineRoute` in `src/routes/<entity>Routes.ts`, then register it in
    `src/app/router.tsx` and in the `createLink` list in `src/app/AppLink.tsx`.
 4. Link to it with `<Route>URI.getURI(input)`.
+
+## Initial data
+
+Servers can inline the initial route's responses as `#tsquid-data`, using
+`src/routes/__generated__/routes.manifest.json`. Set `"ssr": false` in
+`routes.json` to opt a route out. Server spec:
+[`tsquid-server-integration`](https://github.com/hsimah-services/tsquid/tree/main/skills/tsquid-server-integration).
 
 Standards: `node_modules/@tsquid/eslint-plugin/docs/ui-standards.md`.

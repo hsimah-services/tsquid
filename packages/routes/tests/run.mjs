@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const build = mkdtempSync(join(root, '.test-'));
 try {
-  for (const file of ['uri.ts', 'context.tsx', 'entrypoint.tsx']) {
+  for (const file of ['uri.ts', 'context.tsx', 'entrypoint.tsx', 'initialData.ts']) {
     const code = ts.transpileModule(readFileSync(join(root, 'runtime', file), 'utf8'), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX },
     }).outputText;

@@ -23,7 +23,8 @@
     "./uri": "./runtime/uri.ts",
     "./context": "./runtime/context.tsx",
     "./entrypoint": "./runtime/entrypoint.tsx",
-    "./Link": "./runtime/Link.tsx"
+    "./Link": "./runtime/Link.tsx",
+    "./initialData": "./runtime/initialData.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -74,6 +75,10 @@
       "./Link": {
         "types": "./dist/Link.d.ts",
         "default": "./dist/Link.js"
+      },
+      "./initialData": {
+        "types": "./dist/initialData.d.ts",
+        "default": "./dist/initialData.js"
       }
     }
   }

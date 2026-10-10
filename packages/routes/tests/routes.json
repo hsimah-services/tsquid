@@ -3,6 +3,6 @@
   "routes": [
     { "name": "Tutorials", "entryPoint": "components/Tutorial.entrypoint.ts", "path": "/tutorials", "fields": { "filter": { "kind": "string", "optional": true } } },
     { "name": "TutorialDetail", "entryPoint": "components/Tutorial.entrypoint.ts", "path": "/tutorials/:id", "fields": { "id": { "kind": "string" } } },
-    { "name": "Playlists", "entryPoint": "components/Playlist.entrypoint.ts", "path": "/playlists", "fields": {} }
+    { "name": "Playlists", "entryPoint": "components/Playlist.entrypoint.ts", "path": "/playlists", "fields": {}, "ssr": false }
   ]
 }

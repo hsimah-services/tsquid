@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "name": "Home",
+      "path": "/",
+      "ssr": true,
+      "fields": {}
+    },
+    {
+      "name": "Profile",
+      "path": "/me",
+      "ssr": true,
+      "fields": {}
+    }
+  ]
+}

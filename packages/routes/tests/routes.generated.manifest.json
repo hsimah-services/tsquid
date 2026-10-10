@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "name": "Tutorials",
+      "path": "/tutorials",
+      "ssr": true,
+      "fields": {
+        "filter": {
+          "kind": "string",
+          "optional": true,
+          "in": "query"
+        }
+      }
+    },
+    {
+      "name": "TutorialDetail",
+      "path": "/tutorials/:id",
+      "ssr": true,
+      "fields": {
+        "id": {
+          "kind": "string",
+          "optional": false,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "Playlists",
+      "path": "/playlists",
+      "ssr": false,
+      "fields": {}
+    }
+  ]
+}

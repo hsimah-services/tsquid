@@ -6,7 +6,10 @@
   the Astryx block below where they conflict. StyleX is compiled here: use
   `stylex.create`, `stylex.props` and `xstyle`.
 - Routes live in `routes.json`; run `pnpm routes` after editing it. Never edit
-  `__generated__/`.
+  `__generated__/` (route module + server manifest). `"ssr": false` stops servers
+  inlining data for a route.
+- Changing a route's `getPreloadProps` or its query variables changes what an
+  inlining server must send: tell the server owners.
 - One entrypoint per entity: `src/components/<entity>/<Entity>.entrypoint.ts`.
   `getPreloadProps` declares its queries, and the filename determines
   `use<Entity>RouteContext()`.

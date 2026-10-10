@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::Path};
 
 #[derive(Deserialize)]
@@ -15,6 +15,11 @@ struct Route {
     entry_point: String,
     path: String,
     fields: BTreeMap<String, Field>,
+    #[serde(default = "enabled")]
+    ssr: bool,
+}
+fn enabled() -> bool {
+    true
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -33,6 +38,55 @@ fn identifier(s: &str) -> bool {
 /// Validates a routes.json document and returns the generated TypeScript module.
 pub fn generate_json(config: &str) -> Result<String, String> {
     generate(&serde_json::from_str(config).map_err(|error| error.to_string())?)
+}
+
+#[derive(Serialize)]
+struct Manifest<'a> {
+    version: u32,
+    routes: Vec<ManifestRoute<'a>>,
+}
+#[derive(Serialize)]
+struct ManifestRoute<'a> {
+    name: &'a str,
+    path: &'a str,
+    ssr: bool,
+    fields: BTreeMap<&'a str, ManifestField<'a>>,
+}
+#[derive(Serialize)]
+struct ManifestField<'a> {
+    kind: &'a str,
+    optional: bool,
+    #[serde(rename = "in")]
+    location: &'static str,
+}
+
+/// Validates a routes.json document and returns the server manifest. Every route is
+/// listed, so servers match URLs as the client does, then skip non-SSR routes.
+pub fn manifest_json(config: &str) -> Result<String, String> {
+    let config: Config = serde_json::from_str(config).map_err(|error| error.to_string())?;
+    generate(&config)?;
+    Ok(manifest(&config))
+}
+
+fn manifest(config: &Config) -> String {
+    let routes = config
+        .routes
+        .iter()
+        .map(|route| ManifestRoute {
+            name: &route.name,
+            path: &route.path,
+            ssr: route.ssr,
+            fields: route
+                .fields
+                .iter()
+                .map(|(key, field)| {
+                    let in_path = route.path.split('/').any(|part| part.strip_prefix(':') == Some(key));
+                    (key.as_str(), ManifestField { kind: &field.kind, optional: field.optional, location: if in_path { "path" } else { "query" } })
+                })
+                .collect(),
+        })
+        .collect();
+    serde_json::to_string_pretty(&Manifest { version: 1, routes }).unwrap() + "\n"
 }
 
 fn generate(config: &Config) -> Result<String, String> {
@@ -216,6 +270,28 @@ mod tests {
             generate(&config).unwrap(),
             include_str!("../../../packages/routes/tests/routes.generated.ts")
         );
+    }
+
+    #[test]
+    fn generated_manifest_is_current() {
+        assert_eq!(
+            manifest_json(include_str!("../../../packages/routes/tests/routes.json")).unwrap(),
+            include_str!("../../../packages/routes/tests/routes.generated.manifest.json")
+        );
+    }
+
+    #[test]
+    fn manifest_lists_routes_with_ssr_and_field_locations() {
+        let mut config = config("/tutorials/:id", r#"{"id":{"kind":"int"},"tags":{"kind":"string[]","optional":true}}"#);
+        let manifest: serde_json::Value = serde_json::from_str(&super::manifest(&config)).unwrap();
+        assert_eq!(manifest["version"], 1);
+        assert_eq!(manifest["routes"][0]["ssr"], true);
+        assert_eq!(manifest["routes"][0]["fields"]["id"], serde_json::json!({"kind":"int","optional":false,"in":"path"}));
+        assert_eq!(manifest["routes"][0]["fields"]["tags"]["in"], "query");
+        config.routes[0].ssr = false;
+        let manifest: serde_json::Value = serde_json::from_str(&super::manifest(&config)).unwrap();
+        assert_eq!(manifest["routes"][0]["ssr"], false);
+        assert!(manifest_json(r#"{"runtime":"x","routes":[{"name":"A","entryPoint":"A.ts","path":"/","fields":{}}]}"#).is_err());
     }
 
     #[test]

@@ -40,6 +40,8 @@ tsquid-codegen routes.json src/routes/__generated__/routes.ts [--check]
 - An optional path segment is modelled as a separate route.
 - `entryPoint` is a normalized path relative to the config, named
   `<Name>.entrypoint.ts`. Basenames must be unique.
+- `ssr` (default `true`): whether servers may inline initial data for the route.
+  See [Initial data](#initial-data).
 
 ## Generated API
 
@@ -97,8 +99,10 @@ export const ARTICLE_ROUTES = {
 - `getRouteType` maps URL input to any type (sets, enums, dates).
 - `defineRoute(...).Root` is the router component; mount it under
   `RelayEnvironmentProvider`. It accepts `fallback`. It loads with
-  `useEntryPointLoader` (disposed on replace and unmount); errors reach the
-  router's error boundary. `useRouteType()` reads the derived route type.
+  `useEntryPointLoader` in a layout effect (disposed on replace and unmount), so
+  data already in the store or answered synchronously renders without the
+  fallback. Errors reach the router's error boundary. `useRouteType()` reads the
+  derived route type.
 
 ## Links
 
@@ -117,3 +121,36 @@ const AppLink = createLink([ARTICLE_ROUTES.search, ...]);
   `preventDefault`. Preload errors are swallowed; navigation retries.
 - Requires concrete query artifacts (not preloadable IDs) and a single Relay
   environment. A cyclic entrypoint graph throws and releases what it acquired.
+
+## Initial data
+
+tsquid renders on the client. A server, in any language, can inline the initial
+route's GraphQL responses so it renders without a request. The server side is
+specified in the
+[`tsquid-server-integration` skill](https://github.com/hsimah-services/tsquid/tree/main/skills/tsquid-server-integration),
+with conformance vectors.
+
+- `tsquid-codegen` writes `<output>.manifest.json` next to the generated module:
+  every route's path, fields and `ssr` flag.
+- The server inlines `{ version: 1, responses: [{ operation, variables, response }] }`
+  as `<script type="application/json" id="tsquid-data">`.
+
+```ts
+import { readInitialData, withInitialData } from '@tsquid/routes/initialData';
+
+new Environment({
+  network: Network.create(withInitialData(fetchGraphQL, readInitialData(), { warn: import.meta.env.DEV })),
+  store: new Store(new RecordSource()),
+});
+```
+
+- `readInitialData(id = 'tsquid-data')` returns `null` when the element is absent,
+  and throws when it is malformed.
+- `withInitialData` answers each request matching an entry (operation name +
+  variables) once, synchronously. Anything else goes to `fetchFn`, as do requests
+  after the first request's task, when unused entries expire. Duplicate entries
+  throw.
+- Variables match as Relay sends them: declared only, defaults included, top-level
+  `null`s ignored, object key order ignored.
+- `warn` logs boot misses and expired entries, with the exact operation and
+  variables, so drift between the server and `getPreloadProps` shows.

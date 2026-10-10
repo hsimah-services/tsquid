@@ -4,8 +4,10 @@
 
 - Read `NOTES.yaml` first. Update it in the same change whenever a folder, file,
   command or convention changes. Keep it terse, and keep it valid YAML.
-- Keep `README.md`, the package READMEs and `ui-standards.md` in step with
-  behaviour. The audience is experienced engineers: terse, no justification prose.
+- Keep `README.md`, the package READMEs, `ui-standards.md` and `skills/` in step
+  with behaviour; `skills/tsquid-server-integration/vectors.json` is tested
+  against the client. The audience is experienced engineers: terse, no
+  justification prose.
 
 ## Toolchain
 

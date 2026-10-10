@@ -186,3 +186,95 @@ test('context updates preserve unowned repeated keys and remove owned collection
     createElement(RelayEnvironmentProvider, { environment }, createElement(definition.Root, { fallback: createElement(Probe) }))));
   assert.equal(observed, '/tutorials/1/a?enabled=false&utm=abc&utm=xyz#notes');
 });
+
+const { readInitialData, withInitialData } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/initialData.mjs`));
+const { fetchQuery } = await import('relay-runtime');
+// Relay sends declared variables only: defaults filled in, null when unset.
+const argumentDefinitions = [{ kind: 'LocalArgument', name: 'id', defaultValue: null }, { kind: 'LocalArgument', name: 'b', defaultValue: null },
+  { kind: 'LocalArgument', name: 'a', defaultValue: null }, { kind: 'LocalArgument', name: 'first', defaultValue: 10 }];
+const variableQuery = { ...query, operation: { ...query.operation, name: 'VariableQuery', argumentDefinitions },
+  params: { ...query.params, name: 'VariableQuery', cacheID: 'variable' } };
+function initialEnvironment(responses, options) {
+  const requests = [];
+  const network = Network.create(withInitialData((request, variables) => { requests.push([request.name, variables]); return { data: { hello: 'network' } }; },
+    { version: 1, responses }, options));
+  return { environment: new Environment({ network, store: new Store(new RecordSource()) }), requests };
+}
+function fetchSync(environment, request, variables) {
+  let result;
+  fetchQuery(environment, request, variables, { fetchPolicy: 'network-only' }).subscribe({ next: data => { result = data; } });
+  return result;
+}
+
+test('initial data answers matching requests once, synchronously, ignoring key order', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { environment, requests } = initialEnvironment([
+    { operation: 'TestQuery', variables: {}, response: { data: { hello: 'server' } } },
+    { operation: 'VariableQuery', variables: { first: 10, b: { y: 2, x: 1 }, a: [1] }, response: { data: { hello: 'variables' } } },
+  ]);
+  assert.deepEqual(fetchSync(environment, query, {}), { hello: 'server' });
+  assert.deepEqual(fetchSync(environment, variableQuery, { a: [1], b: { x: 1, y: 2 } }), { hello: 'variables' });
+  assert.deepEqual(requests, []);
+  assert.deepEqual(fetchSync(environment, query, {}), { hello: 'network' });
+  assert.deepEqual(requests, [['TestQuery', {}]]);
+  t.mock.timers.reset();
+});
+
+test('initial data falls through on misses and expires after boot, warning when asked', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const warn = t.mock.method(console, 'warn', () => {});
+  const { environment, requests } = initialEnvironment([
+    { operation: 'VariableQuery', variables: { id: '1', first: 10, a: null }, response: { data: { hello: 'server' } } },
+    { operation: 'TestQuery', variables: {}, response: { data: { hello: 'late' } } },
+  ], { warn: true });
+  assert.deepEqual(fetchSync(environment, variableQuery, { id: '2' }), { hello: 'network' });
+  assert.equal(warn.mock.calls[0].arguments[0], 'tsquid-data: no response for VariableQuery {"first":10,"id":"2"}');
+  t.mock.timers.tick(0);
+  assert.deepEqual(warn.mock.calls.slice(1).map(call => call.arguments[0]).sort(), ['tsquid-data: unused response for TestQuery {}', 'tsquid-data: unused response for VariableQuery {"first":10,"id":"1"}']);
+  assert.deepEqual(fetchSync(environment, query, {}), { hello: 'network' });
+  assert.equal(requests.length, 2);
+  assert.equal(warn.mock.callCount(), 3);
+  t.mock.timers.reset();
+});
+
+test('initial data is optional, read from #tsquid-data, and rejected when malformed', (t) => {
+  const fetchFn = () => ({ data: {} });
+  assert.equal(withInitialData(fetchFn, null), fetchFn);
+  assert.throws(() => withInitialData(fetchFn, { version: 1, responses: [
+    { operation: 'A', variables: { x: 1, y: 2 }, response: {} }, { operation: 'A', variables: { y: 2, x: 1 }, response: {} },
+  ] }), /Duplicate/);
+  assert.equal(readInitialData(), null);
+  const elements = {};
+  globalThis.document = { getElementById: id => elements[id] ?? null };
+  t.after(() => { delete globalThis.document; });
+  assert.equal(readInitialData(), null);
+  const data = { version: 1, responses: [{ operation: 'A', variables: {}, response: { data: null } }] };
+  elements['tsquid-data'] = { textContent: JSON.stringify(data) };
+  assert.deepEqual(readInitialData(), data);
+  for (const invalid of [{}, { version: 2, responses: [] }, { version: 1, responses: [{ operation: 'A', variables: [], response: {} }] }, { version: 1, responses: [{ operation: 'A', variables: {} }] }]) {
+    elements['tsquid-data'] = { textContent: JSON.stringify(invalid) };
+    assert.throws(() => readInitialData(), /Invalid #tsquid-data/);
+  }
+});
+
+// The server integration skill's vectors must describe what the client actually does:
+// React Router picks the route, then tsquid parses it; a parse error means no route.
+const vectors = JSON.parse((await import('node:fs')).readFileSync(new URL('../../../skills/tsquid-server-integration/vectors.json', import.meta.url), 'utf8'));
+test('server integration vectors match client routing, parsing and variable matching', async (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const { matchRoutes } = await import('react-router');
+  const routes = vectors.manifest.routes.map(route => ({ id: route.name, path: route.path, uri: createURI(route.path, Object.fromEntries(
+    Object.entries(route.fields).map(([key, { kind, optional }]) => [key, { kind, optional }]))) }));
+  for (const { url, route: expected, input } of vectors.urls) {
+    const [pathname, search = ''] = url.split('?');
+    const match = matchRoutes(routes, { pathname, search: search && `?${search}` })?.at(-1)?.route;
+    let actual = null;
+    try { actual = match ? { route: match.id, input: match.uri.parseURI(url) } : null; } catch { actual = null; }
+    assert.deepEqual(actual, expected === null ? null : { route: expected, input }, url);
+  }
+  for (const { client, server, match } of vectors.variables) {
+    const response = { data: {} };
+    const fetchFn = withInitialData(() => null, { version: 1, responses: [{ operation: 'Q', variables: server, response }] });
+    assert.equal(fetchFn({ name: 'Q' }, client) === response, match, JSON.stringify({ client, server }));
+  }
+});

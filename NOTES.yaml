@@ -14,21 +14,22 @@ layout:
 
   crates/:
     tsquid-codegen/:
-      src/lib.rs: generate_json(&str) -> Result<String, String>; validation; unit tests
+      src/lib.rs: generate_json / manifest_json (&str) -> Result<String, String>; validation; unit tests
       tests: include_str! fixtures from packages/routes/tests
     tsquid-codegen-wasm/:
       what: cdylib, wasm32-unknown-unknown, no I/O
-      abi: alloc, dealloc, generate(ptr,len) -> 1|0, result_ptr, result_len
+      abi: alloc, dealloc, generate|manifest(ptr,len) -> 1|0, result_ptr, result_len
 
   packages/:
     routes/:
-      runtime/: uri.ts (createURI), context.tsx (registry), entrypoint.tsx (defineRoute, RouteEntryPoint, preloadEntryPoint, resource), Link.tsx (createLink)
+      runtime/: uri.ts (createURI), context.tsx (registry), entrypoint.tsx (defineRoute, RouteEntryPoint, preloadEntryPoint, resource), Link.tsx (createLink), initialData.ts (readInitialData, withInitialData)
+      initial-data: "#tsquid-data JSON {version 1, responses[{operation, variables, response}]}; network wrapper answers once, sync; expires after first request's task; Root loads in layout effect"
       publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
       imports: relative, .js extensions
-      tests/: routes.json + routes.generated.ts (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs
+      tests/: routes.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (also checks skills/*/vectors.json)
     codegen/:
-      index.mjs: generate(); instantiates dist/tsquid-codegen.wasm once
-      bin/tsquid-codegen.mjs: CONFIG OUTPUT [--check]
+      index.mjs: generate(), manifest(); instantiates dist/tsquid-codegen.wasm once
+      bin/tsquid-codegen.mjs: "CONFIG OUTPUT.ts [--check]; also writes OUTPUT.manifest.json (all routes + ssr flag, default true)"
       build: cargo build tsquid-codegen-wasm -> dist/ (gitignored); runs in test + prepack
       test/: fixture parity, errors, CLI
     vite/:
@@ -55,6 +56,9 @@ layout:
       scripts/: toolchain.sh (TOOLCHAIN_PUBLISH), dev.sh, fetch-schema.mjs
       AGENTS.md: tsquid rules + generated ASTRYX block
       no pnpm-workspace.yaml: would split the workspace; build-template writes one
+
+  skills/:
+    tsquid-server-integration/: "SKILL.md: server spec (manifest matching, route -> operations, variables, payload); vectors.json: conformance, tested vs React Router + createURI + withInitialData"
 
   scripts/:
     toolchain.sh: container runner (image tsquid-toolchain:3)
