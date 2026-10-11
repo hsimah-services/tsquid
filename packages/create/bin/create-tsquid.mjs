@@ -5,7 +5,7 @@ import { basename, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const TEMPLATE = fileURLToPath(new URL('../template/', import.meta.url));
-const EXECUTABLES = ['scripts/toolchain.sh', 'scripts/dev.sh', 'scripts/fetch-schema.mjs'];
+const EXECUTABLES = ['scripts/toolchain.sh', 'scripts/dev.sh'];
 
 const [dir, ...extra] = process.argv.slice(2);
 if (!dir || dir.startsWith('-') || extra.length) fail('Usage: pnpm create @tsquid <directory>');

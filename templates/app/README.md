@@ -15,7 +15,7 @@ Run commands as `scripts/toolchain.sh pnpm <cmd>`:
 | `lint`, `lint:fix` | eslint + `tsquid-check-architecture` |
 | `routes`, `routes:check` | generate / verify `src/routes/__generated__` (TS + server manifest) |
 | `relay`, `relay:watch`, `relay:check` | tsquid-relay persist / persist --watch / check |
-| `schema` | introspect `GRAPHQL_SCHEMA_ENDPOINT` → `schema.graphql` (placeholder until run) |
+| `schema`, `schema:check` | tsquid-schema fetch / check; GRAPHQL_SCHEMA_ENDPOINT → sorted schema.graphql |
 
 ## Adding a route
 

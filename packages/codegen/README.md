@@ -37,5 +37,15 @@ directories. It never reads application TS. `persist` requires `relay-compiler`
 on PATH and restores the previous persisted file if a one-shot compilation fails.
 Route `--check` remains independent; run both checks in CI.
 
+```sh
+tsquid-schema fetch [--endpoint URL] [--out schema.graphql]
+tsquid-schema check [--endpoint URL] [schema.graphql]
+```
+
+Introspects the endpoint and writes sorted SDL, or compares normalized remote and
+local schemas with a short drift summary. Endpoint defaults to
+`GRAPHQL_SCHEMA_ENDPOINT`, then `BASE_URL` + `/graphql`, then
+`http://localhost:4000/graphql`. Introspection failures exit non-zero.
+
 Output is deterministic; commit it. The config and manifest formats are in the
 [`@tsquid/routes` README](https://www.npmjs.com/package/@tsquid/routes).

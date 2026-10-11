@@ -32,6 +32,8 @@ test('creates a named app pinned to the sibling package versions', () => withTem
   assert.ok(existsSync(join(app, '.gitignore')) && !existsSync(join(app, 'gitignore')));
   assert.ok(existsSync(join(app, 'pnpm-workspace.yaml')));
   assert.ok(existsSync(join(app, 'src/routes/__generated__/routes.ts')));
+  assert.ok(!existsSync(join(app, 'scripts/fetch-schema.mjs')));
+  assert.equal(manifest.scripts.schema, 'tsquid-schema fetch');
   assert.ok(!existsSync(join(app, 'node_modules')) && !existsSync(join(app, 'dist')));
   assert.equal(statSync(join(app, 'scripts/toolchain.sh')).mode & 0o111, 0o111);
   assert.match(read(app, 'README.md'), /^# my-app$/m);
