@@ -16,7 +16,12 @@ run('no-router-link', [
   'import { type Link, useNavigate } from "react-router";',
   'import { useNavigate, Outlet } from "react-router";',
   'import { Link } from "@astryxdesign/core";',
+  'import * as Router from "react-router"; <Router.Outlet />;',
+  'import * as Router from "react-router"; function local(Router) { return Router.Link; }',
 ], [
+  { code: 'import * as Router from "react-router"; <Router.Link />;', errors: [{ messageId: 'link' }] },
+  { code: 'import * as Router from "react-router-dom"; const Link = Router.NavLink;', errors: [{ messageId: 'link' }] },
+  { code: 'import * as Router from "react-router"; const Link = Router["Link"];', errors: [{ messageId: 'link' }] },
   { code: 'import { Link } from "react-router";', errors: [{ messageId: 'link' }] },
   { code: 'import { NavLink as Navigation } from "react-router-dom";', errors: [{ messageId: 'link' }] },
   { code: 'import { Link as AppLink, NavLink } from "react-router";', errors: [{ messageId: 'link' }, { messageId: 'link' }] },

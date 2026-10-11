@@ -39,13 +39,17 @@ Route `--check` remains independent; run both checks in CI.
 
 ```sh
 tsquid-schema fetch [--endpoint URL] [--out schema.graphql]
-tsquid-schema check [--endpoint URL] [schema.graphql]
+tsquid-schema check [--endpoint URL | --from server.graphql] [schema.graphql]
 ```
 
 Introspects the endpoint and writes sorted SDL, or compares normalized remote and
 local schemas with a short drift summary. Endpoint defaults to
 `GRAPHQL_SCHEMA_ENDPOINT`, then `BASE_URL` + `/graphql`, then
 `http://localhost:4000/graphql`. Introspection failures exit non-zero.
+
+`check --from server.graphql` compares normalized SDL files without an API.
+`--from` and `--endpoint` are mutually exclusive. Introspection times out after 30 s.
+`BASE_URL` preserves its path before appending `/graphql`.
 
 Output is deterministic; commit it. The config and manifest formats are in the
 [`@tsquid/routes` README](https://www.npmjs.com/package/@tsquid/routes).
