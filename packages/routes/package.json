@@ -30,7 +30,7 @@
     "build": "tsc -p tsconfig.build.json",
     "prepack": "pnpm build",
     "typecheck": "tsc --noEmit -p .",
-    "test": "pnpm typecheck && node tests/run.mjs"
+    "test": "pnpm --filter @tsquid/codegen build && pnpm typecheck && node tests/run.mjs"
   },
   "peerDependencies": {
     "react": "^19.0.0",

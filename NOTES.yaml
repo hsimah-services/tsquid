@@ -27,7 +27,7 @@ layout:
       initial-data: "#tsquid-data JSON {version 1, responses[{operation, variables, response}]}; network wrapper answers once, sync; expires after first request's task; Root loads in layout effect"
       publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
       imports: relative, .js extensions
-      tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (also checks skills/*/vectors.json)
+      tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (builds codegen first; generates skills/*/vectors.json routes)
     codegen/:
       index.mjs: generate(config, persisted), manifest(config, persisted); instantiates dist/tsquid-codegen.wasm once
       bin/tsquid-codegen.mjs: "CONFIG OUTPUT.ts [--check]; reads config.persistedQueries; also writes OUTPUT.manifest.json (routes, ssr, resolved query)"
