@@ -74,11 +74,11 @@ layout:
 
   scripts/:
     toolchain.sh: container runner (image tsquid-toolchain:3)
-    publish.mjs: "[--dry-run] pack + npm stage publish versions not on npm; tries all, reports failures"
+    publish.mjs: "[--dry-run] pack + npm publish versions not on npm; tries all, reports failures"
   .docker/Dockerfile: rust:1 + wasm32 target + node 22 + npm 11 + pnpm 12.4.1
   .github/workflows/:
     check.yml: cargo test; pnpm test; starter routes:check
-    release.yml: manual, main only, trusted publishing -> staged; approve via npm stage approve (2FA)
+    release.yml: on package.json bumps to main or manual; environment npm (main only); trusted publishing -> npm publish, no 2FA
 
 commands: # via scripts/toolchain.sh
   test: cargo test --locked && pnpm test
@@ -98,7 +98,6 @@ conventions:
     - new dependency-free package missing from lockfile (frozen fails, install says up to date): rm node_modules/.modules.yaml node_modules/.pnpm/lock.yaml, reinstall
 
 todo:
-  - "@tsquid/create first publish is manual; then add its trusted publisher (stage only)"
   - changesets if manual bumps get tedious
   - astryx integration (templates/docs via astryx CLI)?
   - starter not browser-tested

@@ -89,11 +89,9 @@ NOTES.yaml                   repo map
 
 ## Releasing
 
-1. Bump the versions in `packages/*/package.json` and merge to `main`.
-2. Run the **Release** workflow. It stages each version not yet on npm, with provenance.
-3. Approve it:
-   `scripts/toolchain.sh bash`, then `npm login`, `npm stage list` and
-   `npm stage approve <stage-id>` (2FA).
+Bump the versions in `packages/*/package.json` and merge to `main`. The **Release**
+workflow publishes each version not yet on npm, with provenance, via trusted
+publishing. It can also be run manually from the Actions tab.
 
 ## License
 

@@ -1,18 +1,28 @@
 name: Release
 
-# Run manually from the Actions tab. Stages each package version not yet on npm, via
-# trusted publishing (no token; provenance is automatic). Approve with `npm stage approve`.
+# Publishes each package version not yet on npm, via trusted publishing (OIDC: no
+# token, no 2FA; provenance is automatic). Runs when a version bump lands on main,
+# or manually from the Actions tab. npm accepts only this workflow in the `npm`
+# environment, which deploys from main only.
 on:
+  push:
+    branches: [main]
+    paths: ['packages/*/package.json']
   workflow_dispatch:
 
 permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   publish:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: npm
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7

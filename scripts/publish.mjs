@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Stages each public package under packages/ whose version isn't on npm yet.
+// Publishes each public package under packages/ whose version isn't on npm yet.
 // `pnpm pack` runs prepack builds and applies publishConfig and workspace: ranges;
-// `npm stage publish` uploads the tarball. A maintainer then publishes it with
-// `npm stage approve` (2FA). Every package is attempted; failures are reported at the end.
+// `npm publish` uploads the tarball via trusted publishing (OIDC) in CI. Every
+// package is attempted; failures are reported at the end.
 //
 //   node scripts/publish.mjs [--dry-run]
 import { execFileSync } from 'node:child_process';
@@ -13,7 +13,7 @@ import { join } from 'node:path';
 const DRY_RUN = process.argv.includes('--dry-run');
 const PACKAGES = new URL('../packages/', import.meta.url);
 
-const staged = [];
+const published = [];
 const failed = [];
 for (const dir of readdirSync(PACKAGES)) {
   const cwd = new URL(`${dir}/`, PACKAGES);
@@ -28,15 +28,14 @@ for (const dir of readdirSync(PACKAGES)) {
   try {
     execFileSync('pnpm', ['pack', '--pack-destination', out], { cwd, stdio: 'inherit' });
     const [tarball] = readdirSync(out);
-    execFileSync('npm', ['stage', 'publish', join(out, tarball), '--access', 'public', ...(DRY_RUN ? ['--dry-run'] : [])], { stdio: 'inherit' });
-    staged.push(spec);
+    execFileSync('npm', ['publish', join(out, tarball), '--access', 'public', ...(DRY_RUN ? ['--dry-run'] : [])], { stdio: 'inherit' });
+    published.push(spec);
   } catch (error) {
     failed.push(`${spec}: ${error.message.split('\n')[0]}`);
   } finally { rmSync(out, { recursive: true, force: true }); }
 }
 
-console.log(`\nStaged: ${staged.join(', ') || 'none'}`);
-if (staged.length && !DRY_RUN) console.log('Approve with 2FA: npm stage list, then npm stage approve <stage-id>');
+console.log(`\n${DRY_RUN ? 'Would publish' : 'Published'}: ${published.join(', ') || 'none'}`);
 if (failed.length) {
   console.error(`Failed:\n  ${failed.join('\n  ')}`);
   process.exitCode = 1;
