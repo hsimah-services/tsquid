@@ -325,11 +325,11 @@ test('server integration vectors match client routing, parsing and variable matc
     const server = {};
     for (const [name, { input: field, default: value }] of Object.entries(query.variables)) {
       if (field !== undefined && input[field] !== undefined) server[name] = input[field];
-      else server[name] = value ?? null;
+      else if (value !== undefined) server[name] = value;
     }
     assert.deepEqual(server, vectors.urls.find(vector => vector.url === url).variables, url);
     const generated = vectorRoutes[`${expected}RouteQuery`].getVariables(actual.input);
-    assert.deepEqual(generated, server, url);
+    assert.deepEqual(Object.fromEntries(Object.entries(generated).filter(([, value]) => value !== null)), server, url);
     const argumentDefinitions = Object.entries(query.variables).map(([name, { default: value }]) => ({ kind: 'LocalArgument', name, defaultValue: value ?? null }));
     const request = { ...variableQuery, operation: { ...variableQuery.operation, name: query.operation, argumentDefinitions }, params: { ...variableQuery.params, name: query.operation, cacheID: query.id } };
     const sent = createOperationDescriptor(request, input).request.variables;

@@ -78,21 +78,28 @@ the exported `Empty` (`Record<string, never>`). `EntryPointPropsOf<typeof entryp
 extracts the root component's props.
 
 ```ts
-export const ARTICLE_ENTRY_POINT: RouteEntryPoint<RouteType, Queries, Nested, RuntimeProps, ExtraProps> = {
+export const ARTICLE_ENTRY_POINT: RouteEntryPoint<ArticleEntryPointParams, Queries, Nested, RuntimeProps, ExtraProps> = {
   root: resource('ArticlePage', ArticleEntryPoint),
-  getPreloadProps: route => ({
-    queries: { search: { parameters: ArticleSearchQuery, variables: { section: route.section } } },
-  }),
+  getPreloadProps: route => {
+    switch (route.currentRoute) {
+      case RouteName.ArticleSearch:
+        return { queries: { search: { parameters: ArticleSearchQuery, variables: { section: route.input.section } } } };
+      case RouteName.ArticleDetail:
+        return { queries: { detail: { parameters: ArticleDetailQuery, variables: { id: route.input.id } } } };
+    }
+  },
 };
 
 export const ARTICLE_ROUTES = {
-  search: defineRoute({
-    uri: ArticleSearchURI,
-    context: ArticleSearchRouteContext,
-    getRouteType: input => ({ ...input, tags: new Set(input.tags ?? []) }),
-    entryPoint: ARTICLE_ENTRY_POINT,
-  }),
+  search: defineRoute({ uri: ArticleSearchURI, context: ArticleSearchRouteContext, entryPoint: ARTICLE_ENTRY_POINT }),
 };
+```
+
+For derived route types, provide `getRouteType` and type the entrypoint with that
+result instead:
+
+```ts
+getRouteType: (input, currentRoute) => ({ currentRoute, ...input, tags: new Set(input.tags ?? []) })
 ```
 
 - `RouteEntryPoint` types Relay's `root` + `getPreloadProps` contract. Relay's own
@@ -158,6 +165,10 @@ with conformance vectors.
 - The entrypoint must preload that query with those variables:
   `variables: PostsRouteQuery.getVariables(route.input)`. The generated helper
   includes every declared variable, defaults and nulls; `operation` names the query.
+- URL string fields bound to GraphQL enums remain strings. Narrow them in
+  `getRouteType` before calling `getVariables` to satisfy Relay's enum variable
+  type; the generic helper preserves that narrower input type. The generator
+  has no schema enum catalogue and cannot validate or narrow enum values itself.
 - Everything else the route loads (other queries, nested entrypoints, conditional
   logic) is fetched by the client and suspends where it's read. Read it below its
   own `<Suspense>` so the rest renders first. Keep the default `fetchPolicy`
