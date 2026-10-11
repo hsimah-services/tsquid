@@ -228,9 +228,9 @@ Relay must persist operations to the file the config names, keeping query text:
 ```
 
 Relay only appends to that file, and skips unchanged operations. Regenerate it
-from empty, `echo {} > persisted_queries.json && relay-compiler --repersist`,
+from empty, `tsquid-relay persist`,
 before `tsquid-codegen`. The generator rejects an operation name with more than
-one version.
+one version. `tsquid-relay check` verifies persisted ids against compiled artifacts.
 
 The server inlines `{ version: 1, responses: [{ operation, variables, response }] }`
 as `<script type="application/json" id="tsquid-data">`.

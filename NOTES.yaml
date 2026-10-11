@@ -39,6 +39,7 @@ layout:
     codegen/:
       index.mjs: generate(config, persisted), manifest(config, persisted); instantiates dist/tsquid-codegen.wasm once
       bin/tsquid-codegen.mjs: "CONFIG OUTPUT.ts [--check]; reads config.persistedQueries; also writes OUTPUT.manifest.json (routes, ssr, resolved query)"
+      bin/tsquid-relay.mjs: persist [config] [--watch] resets persisted file + runs compiler; check compares artifact ids, Relay default excludes, skips node_modules; no application TS
       build: cargo build tsquid-codegen-wasm -> dist/ (gitignored); runs in test + prepack
       test/: fixture parity, errors, CLI
     vite/:
@@ -59,7 +60,7 @@ layout:
     app/:
       what: starter; workspace member (CI runs its check); packed into @tsquid/create
       routes: Home (/) static, Profile (/me) + ProfileQuery (route query)
-      relay: persistConfig persisted_queries.json (include_query_text); `relay` resets it + --repersist; run before `routes`
+      relay: persistConfig persisted_queries.json (include_query_text); tsquid-relay persist/check; run persist before routes, check before build in pnpm check
       schema.graphql: placeholder
       src/: app/ (providers, router, AppLink), relay/, routes/ (+ __generated__), components/{navigation,home,profile}; ProfilePage lazy root
       docker: node 22 + pnpm
