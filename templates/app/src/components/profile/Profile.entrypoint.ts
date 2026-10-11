@@ -12,7 +12,7 @@ export function ProfileEntryPoint({ queries }: EntryPointProps<Queries, Empty, E
 // Navigating here, or hovering a link to here, starts ProfileQuery before ProfilePage renders.
 export const PROFILE_ENTRY_POINT: RouteEntryPoint<Empty, Queries, Empty, Empty, Empty> = {
   root: resource('ProfilePage', ProfileEntryPoint),
-  getPreloadProps: (input) => ({ queries: { profile: { parameters: PROFILE_QUERY_NODE, variables: ProfileRouteQuery.getVariables(input) } } }),
+  getPreloadProps: (route) => ({ queries: { profile: { parameters: PROFILE_QUERY_NODE, variables: ProfileRouteQuery.getVariables(route) } } }),
 };
 
 type Queries = { profile: ProfileQuery };

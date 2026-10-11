@@ -146,6 +146,10 @@ with conformance vectors.
 - The entrypoint must preload that query with those variables:
   `variables: PostsRouteQuery.getVariables(route.input)`. The generated helper
   includes every declared variable, defaults and nulls; `operation` names the query.
+- URL string fields bound to GraphQL enums remain strings. Narrow them in
+  `getRouteType` before calling `getVariables` to satisfy Relay's enum variable
+  type; the generic helper preserves that narrower input type. The generator
+  has no schema enum catalogue and cannot validate or narrow enum values itself.
 - Everything else the route loads (other queries, nested entrypoints, conditional
   logic) is fetched by the client and suspends where it's read. Read it below its
   own `<Suspense>` so the rest renders first. Keep the default `fetchPolicy`

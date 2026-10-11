@@ -26,8 +26,14 @@ void invalid;
 
 // Generated entrypoint hooks return a union narrowed by the generated enum.
 import { RouteName, TutorialDetailRouteQuery, useTutorialRouteContext } from './routes.generated';
-const generatedVariables: { id: string; first?: number; after?: string | null; order?: 'POSITION' } = TutorialDetailRouteQuery.getVariables({ id: '1' });
+const generatedVariables: { id: string; first?: number; after?: string | null; order?: 'POSITION' } = TutorialDetailRouteQuery.getVariables({ id: '1', order: 'POSITION' as const });
 void generatedVariables;
+const narrowedEnumVariables: { id: string; order: 'POSITION' | 'TITLE'; first?: number; after?: string | null } = TutorialDetailRouteQuery.getVariables({ id: '1', order: 'TITLE' as const });
+void narrowedEnumVariables;
+const looseEnumInput: import('./routes.generated').TutorialDetailInputType = { id: '1' };
+// @ts-expect-error URL strings must be narrowed before assigning enum query variables.
+const looseEnumVariables: { order: 'POSITION' | 'TITLE' } = TutorialDetailRouteQuery.getVariables(looseEnumInput);
+void looseEnumVariables;
 function RouteContextConsumer() {
   const route = useTutorialRouteContext();
   if (route.currentRoute === RouteName.TutorialDetail) {

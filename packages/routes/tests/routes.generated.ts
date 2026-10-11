@@ -16,9 +16,24 @@ export const TutorialsURI = createURI<TutorialsInputType>("/tutorials", {"filter
 
 export type TutorialDetailInputType = {
   id: string;
+  order?: string;
 };
-export const TutorialDetailURI = createURI<TutorialDetailInputType>("/tutorials/:id", {"id":{"kind":"string","optional":false}});
+export const TutorialDetailURI = createURI<TutorialDetailInputType>("/tutorials/:id", {"id":{"kind":"string","optional":false},"order":{"kind":"string","optional":true}});
 
+export const TutorialDetailRouteQuery = {
+  operation: "TutorialDetailQuery",
+  getVariables: <I extends TutorialDetailInputType>(input: I) : {
+    "after": null;
+    "first": 10;
+    "id": I["id"];
+    "order": NonNullable<(I & TutorialDetailInputType)["order"]> | "POSITION";
+  } => ({
+    "after": null,
+    "first": 10,
+    "id": input.id,
+    "order": input.order ?? ("POSITION" as const),
+  }),
+} as const;
 
 export type PlaylistsInputType = {
 };
@@ -59,13 +74,3 @@ export function useTutorialRouteContext(): TutorialRouteContextType {
       throw new Error('useTutorialRouteContext requires the Tutorial entrypoint; current route is ' + currentRoute);
   }
 }
-
-export const TutorialDetailRouteQuery = {
-  operation: "TutorialDetailQuery",
-  getVariables: (input: TutorialDetailInputType) => ({
-    "after": null,
-    "first": 10,
-    "id": input.id,
-    "order": "POSITION" as const,
-  }),
-} as const;
