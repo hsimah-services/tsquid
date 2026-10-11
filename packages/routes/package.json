@@ -24,7 +24,8 @@
     "./context": "./runtime/context.tsx",
     "./entrypoint": "./runtime/entrypoint.tsx",
     "./Link": "./runtime/Link.tsx",
-    "./initialData": "./runtime/initialData.ts"
+    "./initialData": "./runtime/initialData.ts",
+    "./network": "./runtime/network.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -80,6 +81,10 @@
       "./initialData": {
         "types": "./dist/initialData.d.ts",
         "default": "./dist/initialData.js"
+      },
+      "./network": {
+        "types": "./dist/network.d.ts",
+        "default": "./dist/network.js"
       }
     }
   }

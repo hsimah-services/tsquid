@@ -156,6 +156,16 @@ const AppLink = createLink([ARTICLE_ROUTES.search, ...]);
 
 ## Initial data
 
+`createFetchGraphQL({ url, fetch?, headers?, credentials? })` from
+`@tsquid/routes/network` posts `{ query, operationName, variables }` and returns a
+Relay observable. Unsubscribing aborts the request; credentials default to
+`same-origin`. `headers(request)` may be asynchronous (for mutation CSRF tokens).
+HTTP failures and responses without data throw; partial data plus errors passes
+through to Relay. Compose it with `withInitialData` below.
+
+For sign-out cancellation, supply a fetch wrapper that combines `init.signal`
+with an app-owned signal via `AbortSignal.any`; abort the latter on sign-out.
+
 tsquid renders on the client. A server, in any language, can run a route's
 `query` and inline the response, so the route renders without waiting on it. The
 server side is specified in the

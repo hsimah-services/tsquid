@@ -409,6 +409,51 @@ test('context updates preserve unowned repeated keys and remove owned collection
 });
 
 const { readInitialData, withInitialData } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/initialData.mjs`));
+const { createFetchGraphQL } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/network.mjs`));
+test('GraphQL network posts named operations with async headers and validates responses', async () => {
+  let observed;
+  const payload = { data: { hello: 'partial' }, errors: [{ message: 'field failed' }] };
+  const fetchGraphQL = createFetchGraphQL({ url: '/graphql', credentials: 'include', headers: async request => ({ 'x-csrf-token': request.operationKind }), fetch: async (url, init) => { observed = { url, ...init }; return new Response(JSON.stringify(payload)); } });
+  assert.deepEqual(await Observable.from(fetchGraphQL(query.params, { id: '1' }, {})).toPromise(), payload);
+  assert.equal(observed.url, '/graphql');
+  assert.equal(observed.method, 'POST');
+  assert.equal(observed.credentials, 'include');
+  assert.equal(observed.headers.get('content-type'), 'application/json');
+  assert.equal(observed.headers.get('x-csrf-token'), 'query');
+  assert.deepEqual(JSON.parse(observed.body), { query: query.params.text, operationName: 'TestQuery', variables: { id: '1' } });
+  for (const [payload, status, error] of [
+    [{}, 403, /403/],
+    [{ errors: [{ message: 'one' }, { message: 'two' }] }, 200, /one two/],
+    [{ data: null, errors: [{ message: 'null data' }] }, 200, /null data/],
+    [{}, 200, /no data/],
+    [null, 200, /Invalid GraphQL response/],
+    [{ data: {}, errors: 'bad' }, 200, /Invalid GraphQL errors/],
+    [{ data: 'bad' }, 200, /Invalid GraphQL data/],
+  ]) {
+    const fetchGraphQL = createFetchGraphQL({ url: '/graphql', fetch: async () => new Response(JSON.stringify(payload), { status }) });
+    await assert.rejects(Observable.from(fetchGraphQL(query.params, {}, {})).toPromise(), error);
+  }
+});
+test('GraphQL network aborts on unsubscribe, including during async headers', async () => {
+  let signal, called = 0, errors = 0;
+  const fetchGraphQL = createFetchGraphQL({ url: '/graphql', fetch: (_url, init) => { signal = init.signal; called++; return new Promise((_resolve, reject) => { signal.addEventListener('abort', () => reject(new Error('aborted'))); }); } });
+  const subscription = Observable.from(fetchGraphQL(query.params, {}, {})).subscribe({ error: () => { errors++; } });
+  await Promise.resolve();
+  assert.equal(called, 1);
+  assert.equal(signal.aborted, false);
+  subscription.unsubscribe();
+  assert.equal(signal.aborted, true);
+  await Promise.resolve();
+  assert.equal(errors, 0);
+  let release;
+  const headers = new Promise(resolve => { release = resolve; });
+  const slowHeaders = createFetchGraphQL({ url: '/graphql', headers: () => headers, fetch: () => { called++; throw new Error('should not fetch'); } });
+  Observable.from(slowHeaders(query.params, {}, {})).subscribe({ error: () => { errors++; } }).unsubscribe();
+  release({});
+  await Promise.resolve();
+  assert.equal(called, 1);
+  assert.equal(errors, 0);
+});
 const { fetchQuery, createOperationDescriptor } = await import('relay-runtime');
 // Relay sends declared variables only: defaults filled in, null when unset.
 const argumentDefinitions = [{ kind: 'LocalArgument', name: 'id', defaultValue: null }, { kind: 'LocalArgument', name: 'b', defaultValue: null },
