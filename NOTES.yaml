@@ -40,7 +40,7 @@ layout:
       index.mjs: generate(config, persisted), manifest(config, persisted); instantiates dist/tsquid-codegen.wasm once
       bin/tsquid-codegen.mjs: "CONFIG OUTPUT.ts [--check]; reads config.persistedQueries; also writes OUTPUT.manifest.json (routes, ssr, resolved query)"
       bin/tsquid-relay.mjs: persist [config] [--watch] resets persisted file + runs compiler; check compares artifact ids, Relay default excludes, skips node_modules; no application TS
-      bin/tsquid-schema.mjs: fetch/check via graphql introspection; sorted SDL, normalized drift summary; GRAPHQL_SCHEMA_ENDPOINT or BASE_URL
+      bin/tsquid-schema.mjs: fetch/check via graphql introspection; sorted SDL, normalized drift summary; check --from SDL or 30 s introspection; GRAPHQL_SCHEMA_ENDPOINT or path-preserving BASE_URL
       build: cargo build tsquid-codegen-wasm -> dist/ (gitignored); runs in test + prepack
       test/: fixture parity, errors, CLI
     vite/:

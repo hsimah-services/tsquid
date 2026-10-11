@@ -5,21 +5,27 @@ import { buildClientSchema, buildSchema, getIntrospectionQuery, lexicographicSor
 
 try {
   const [command, ...args] = process.argv.slice(2);
-  let endpoint = process.env.GRAPHQL_SCHEMA_ENDPOINT ?? (process.env.BASE_URL ? new URL('/graphql', process.env.BASE_URL).href : 'http://localhost:4000/graphql');
-  let output = 'schema.graphql';
+  let endpoint = process.env.GRAPHQL_SCHEMA_ENDPOINT ?? (process.env.BASE_URL ? new URL('graphql', process.env.BASE_URL.endsWith('/') ? process.env.BASE_URL : process.env.BASE_URL + '/').href : 'http://localhost:4000/graphql');
+  let output = 'schema.graphql', from, explicitEndpoint = false;
   let positional = false;
   if (!['fetch', 'check'].includes(command)) throw usage();
   for (let index = 0; index < args.length; index++) {
-    if (args[index] === '--endpoint' && args[index + 1]) endpoint = args[++index];
+    if (args[index] === '--endpoint' && args[index + 1]) { endpoint = args[++index]; explicitEndpoint = true; }
+    else if (args[index] === '--from' && command === 'check' && args[index + 1]) from = args[++index];
     else if (args[index] === '--out' && command === 'fetch' && args[index + 1]) output = args[++index];
     else if (!args[index].startsWith('-') && command === 'check' && !positional) { output = args[index]; positional = true; }
     else throw usage();
   }
-  const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: getIntrospectionQuery() }) });
-  if (!response.ok) throw new Error(`Introspection failed (${response.status} ${response.statusText})`);
-  const { data, errors } = await response.json();
-  if (errors?.length) throw new Error(`Introspection failed: ${errors.map(error => error.message).join(' ')}`);
-  const remote = normalize(buildClientSchema(data));
+  if (from && explicitEndpoint) throw new Error('--from and --endpoint are mutually exclusive');
+  let remote;
+  if (from) remote = normalize(buildSchema(readFileSync(from, 'utf8')));
+  else {
+    const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: getIntrospectionQuery() }), signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) throw new Error(`Introspection failed (${response.status} ${response.statusText})`);
+    const { data, errors } = await response.json();
+    if (errors?.length) throw new Error(`Introspection failed: ${errors.map(error => error.message).join(' ')}`);
+    remote = normalize(buildClientSchema(data));
+  }
   if (command === 'fetch') {
     mkdirSync(dirname(output), { recursive: true });
     writeFileSync(output, remote);
@@ -39,4 +45,4 @@ try {
 }
 
 function normalize(schema) { return printSchema(lexicographicSortSchema(schema)) + '\n'; }
-function usage() { return new Error('Usage: tsquid-schema fetch [--endpoint URL] [--out schema.graphql] | check [--endpoint URL] [schema.graphql]'); }
+function usage() { return new Error('Usage: tsquid-schema fetch [--endpoint URL] [--out schema.graphql] | check [--endpoint URL | --from server.graphql] [schema.graphql]'); }
