@@ -248,4 +248,21 @@ export const rules = {
   },
 };
 
+rules['no-router-link'] = {
+  meta: meta('Use the app preloading link in components', { link: "Use Astryx Link (through the app's createLink component) or the app's link." }),
+  create(context) {
+    if (!/(?:^|\/)src\/components\//.test(context.filename.replaceAll('\\', '/'))) return {};
+    return {
+      ImportDeclaration(node) {
+        if (node.importKind === 'type' || !['react-router', 'react-router-dom'].includes(node.source.value)) return;
+        for (const specifier of node.specifiers) {
+          if (specifier.type === 'ImportSpecifier' && specifier.importKind !== 'type' && ['Link', 'NavLink'].includes(specifier.imported.name ?? specifier.imported.value)) {
+            context.report({ node: specifier, messageId: 'link' });
+          }
+        }
+      },
+    };
+  },
+};
+
 export default { rules };

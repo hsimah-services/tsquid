@@ -40,7 +40,7 @@ layout:
     vite/:
       index.mjs: tsquid() = stylex -> react -> relay + dedupe + global shim
     eslint-plugin/:
-      src/: index.mjs (configs.recommended), rules.mjs, check-architecture.mjs
+      src/: index.mjs (configs.recommended), rules.mjs (incl. no-router-link in components), check-architecture.mjs
       bin/: tsquid-check-architecture (src/components graph)
       docs/ui-standards.md: the UI standards
       test/: RuleTester + architecture

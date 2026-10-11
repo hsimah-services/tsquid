@@ -10,6 +10,18 @@ const filename = '/project/src/components/tutorial/TutorialDetail.tsx';
 const wrap = (cases) => cases.map((test) => typeof test === 'string' ? { code: test, filename } : { filename, ...test });
 const run = (name, valid, invalid) => tester.run(name, rules[name], { valid: wrap(valid), invalid: wrap(invalid) });
 
+run('no-router-link', [
+  { code: 'import { Link, NavLink } from "react-router";', filename: '/project/src/app/AppLink.tsx' },
+  'import type { Link, NavLink } from "react-router";',
+  'import { type Link, useNavigate } from "react-router";',
+  'import { useNavigate, Outlet } from "react-router";',
+  'import { Link } from "@astryxdesign/core";',
+], [
+  { code: 'import { Link } from "react-router";', errors: [{ messageId: 'link' }] },
+  { code: 'import { NavLink as Navigation } from "react-router-dom";', errors: [{ messageId: 'link' }] },
+  { code: 'import { Link as AppLink, NavLink } from "react-router";', errors: [{ messageId: 'link' }, { messageId: 'link' }] },
+]);
+
 run('module-order', [
   'import x from "x"; const LIMIT = 1; export function TutorialDetail() {} function local() {}',
   'import * as stylex from "@stylexjs/stylex"; export type TutorialDetailProps = {}; export function TutorialDetail() {} const styles = stylex.create({});',

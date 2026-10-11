@@ -27,6 +27,9 @@ components/
 
 ## Modules
 
+Components use Astryx `Link` through the app's `createLink` provider, or the app's
+link. Direct `Link` / `NavLink` imports from React Router belong in `src/app/`.
+
 Order:
 1. imports;
 2. local `SHOUTING_SNAKE_CASE` constants;
