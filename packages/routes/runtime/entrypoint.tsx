@@ -45,6 +45,19 @@ export function resource<C>(id: string, component: C): JSResourceReference<C> {
   return { getModuleId: () => id, getModuleIfRequired: () => component, load: () => Promise.resolve(component) };
 }
 
+export function lazyResource<C>(id: string, loader: () => Promise<C>): JSResourceReference<C> {
+  let component: C | null = null;
+  let pending: Promise<C> | null = null;
+  return {
+    getModuleId: () => id,
+    getModuleIfRequired: () => component,
+    load: () => pending ??= Promise.resolve().then(loader).then(value => {
+      component = value;
+      return value;
+    }).catch(error => { pending = null; throw error; }),
+  };
+}
+
 type DefinedRoute<I, R> = URI<I> & {
   Root: ComponentType<{ fallback?: ReactNode }>;
   useRouteType(): R;

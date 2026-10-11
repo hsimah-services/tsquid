@@ -5,6 +5,32 @@ import { Environment, Network, RecordSource, Store, Observable } from 'relay-run
 
 const { createURI, normalizePathname } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/uri.mjs`));
 const { preloadEntryPoint, resource } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+const { lazyResource } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+test('lazy resources share hover and navigation loads and retry failures', async () => {
+  let calls = 0, resolve;
+  const component = () => null;
+  const root = lazyResource('lazy', () => { calls++; return new Promise(done => { resolve = done; }); });
+  assert.equal(root.getModuleId(), 'lazy');
+  assert.equal(root.getModuleIfRequired(), null);
+  const { environment } = setup();
+  const dispose = preloadEntryPoint(environment, { root, getPreloadProps: () => ({}) }, {});
+  const navigation = root.load();
+  assert.equal(root.load(), navigation);
+  await Promise.resolve();
+  assert.equal(calls, 1);
+  resolve(component);
+  assert.equal(await navigation, component);
+  assert.equal(root.getModuleIfRequired(), component);
+  assert.equal(await root.load(), component);
+  assert.equal(calls, 1);
+  dispose();
+  let attempts = 0;
+  const retry = lazyResource('retry', () => { if (++attempts === 1) throw new Error('load failed'); return Promise.resolve(component); });
+  await assert.rejects(retry.load(), /load failed/);
+  assert.equal(retry.getModuleIfRequired(), null);
+  assert.equal(await retry.load(), component);
+  assert.equal(attempts, 2);
+});
 const route = createURI('/tutorials/:level/:id', {
   level: { kind: 'int', optional: false }, id: { kind: 'string', optional: false },
   filter: { kind: 'string', optional: true }, enabled: { kind: 'bool', optional: true },

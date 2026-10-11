@@ -37,8 +37,8 @@ Order:
 - Export the filename's name (or its `SHOUTING_SNAKE_CASE` form for data), plus
   related names: `ArticleDetail`, `ArticleDetailProps`, `ARTICLE_DETAIL_QUERY`.
 - No default exports, star exports or unrelated exports.
-- `<Name>.entrypoint.ts` exports `<Name>EntryPoint` and `<NAME>_ENTRY_POINT`. Use
-  `createElement` there; page UI lives in `.tsx`.
+- `<Name>.entrypoint.ts` exports `<NAME>_ENTRY_POINT`. Eager roots may export
+  `<Name>EntryPoint` using `createElement`; lazy roots load page UI from `.tsx`.
 - Local components are named `Owner_Part` (`ArticleDetail_Byline`) and declared
   at module scope.
 - Module data is `const`, not destructured, and never mutable.
