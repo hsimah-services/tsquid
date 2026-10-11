@@ -72,13 +72,12 @@ if (route.currentRoute === RouteName.ArticleSearch) {
 
 ## Entrypoints
 
-`EntryPointProps<Q, N = Empty, P = Empty, E = Empty>` and
-`RouteEntryPoint<R, Q, N = Empty, P = Empty, E = Empty>` default unused slots to
-the exported `Empty` (`Record<string, never>`). `EntryPointPropsOf<typeof entrypoint>`
-extracts the root component's props.
-
 ```ts
-export const ARTICLE_ENTRY_POINT: RouteEntryPoint<ArticleEntryPointParams, Queries, Nested, RuntimeProps, ExtraProps> = {
+export function ArticleEntryPoint({ queries }: EntryPointPropsOf<typeof ARTICLE_ENTRY_POINT>) {
+  return createElement(ArticlePage, { queries });
+}
+
+export const ARTICLE_ENTRY_POINT: RouteEntryPoint<ArticleEntryPointParams, Queries> = {
   root: resource('ArticlePage', ArticleEntryPoint),
   getPreloadProps: route => {
     switch (route.currentRoute) {
@@ -94,6 +93,11 @@ export const ARTICLE_ROUTES = {
   search: defineRoute({ uri: ArticleSearchURI, context: ArticleSearchRouteContext, entryPoint: ARTICLE_ENTRY_POINT }),
 };
 ```
+
+- Unused slots default to the exported `Empty` (`Record<string, never>`):
+  `EntryPointProps<Q, N = Empty, P = Empty, E = Empty>` and
+  `RouteEntryPoint<R, Q, N = Empty, P = Empty, E = Empty>`.
+- `EntryPointPropsOf<typeof entrypoint>` extracts the root component's props.
 
 For derived route types, provide `getRouteType` and type the entrypoint with that
 result instead:
@@ -112,7 +116,8 @@ getRouteType: (input, currentRoute) => ({ currentRoute, ...input, tags: new Set(
 - `resource(id, Component)` wraps an eager component.
   `lazyResource(id, () => import('./Page').then(m => m.Page))` shares one load
   between preload and navigation, exposes the loaded component synchronously,
-  and retries after failure.
+  and retries after failure. Speculative query/module failures release their
+  preload retains and subscriptions.
 - Without `getRouteType`, params are `{ currentRoute, input }`. The generated
   `<Entry>EntryPointParams` union narrows input by `currentRoute` in `getPreloadProps`.
 - `getRouteType(input, currentRoute)` optionally maps URL input to another type
