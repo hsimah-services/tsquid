@@ -156,23 +156,27 @@ test('cycles fail and release already acquired retains', () => {
 test('failed speculative query and module loads release all acquired retains', async () => {
   const failedModule = lazyResource('failed-preload', () => Promise.reject(new Error('module failed')));
   const { environment, stats } = setup();
-  const dispose = preloadEntryPoint(environment, { ...child, root: failedModule }, {});
+  let failures = 0;
+  const dispose = preloadEntryPoint(environment, { ...child, root: failedModule }, {}, () => { failures++; });
   assert.equal(stats().retains, 1);
   await assert.rejects(failedModule.load(), /module failed/);
   assert.deepEqual(stats(), { requests: 1, retains: 0, cancelled: 1 });
   dispose();
+  assert.equal(failures, 1);
   const synchronous = setup(() => Observable.create(sink => { sink.error(new Error('query failed')); }));
   let nested = false;
   const point = { ...child, getPreloadProps: () => ({ ...child.getPreloadProps(), entryPoints: { nested: { entryPoint: { ...child, getPreloadProps: () => { nested = true; return {}; } }, entryPointParams: {} } } }) };
-  preloadEntryPoint(synchronous.environment, point, {})();
+  preloadEntryPoint(synchronous.environment, point, {}, () => { failures++; })();
+  assert.equal(failures, 2);
   assert.equal(synchronous.stats().retains, 0);
   assert.equal(nested, false);
   let fail;
   const asynchronous = setup(() => Observable.create(sink => { fail = () => sink.error(new Error('late error')); }));
-  preloadEntryPoint(asynchronous.environment, child, {});
+  preloadEntryPoint(asynchronous.environment, child, {}, () => { failures++; });
   assert.equal(asynchronous.stats().retains, 1);
   fail();
   assert.equal(asynchronous.stats().retains, 0);
+  assert.equal(failures, 3);
 });
 
 test('native Relay loads and renders the configured nested entrypoint graph', async (t) => {
