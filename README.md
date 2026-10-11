@@ -16,6 +16,7 @@ An opinionated React framework built on strongly typed route context.
   Generated `<Entry>EntryPointParams` narrow input by `currentRoute`;
   `defineRoute` supplies `{ currentRoute, input }` unless `getRouteType` is set.
   Active routes can refresh their query graph and provide an error fallback with retry.
+  A shared GraphQL fetch function supports request cancellation and async headers.
 - **Initial data.** A route can name one Relay query whose variables come from
   its URL. A generated manifest gives any server the URL patterns, query text and
   variable bindings. The server inlines the response as `#tsquid-data`, and the

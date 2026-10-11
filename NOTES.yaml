@@ -33,6 +33,7 @@ layout:
       route-errors: Root errorFallback({error,retry}); network-only retry, reset on location key; rejected lazy loads use React use
       createLink: to/href + anchor ref; basename-aware matches preload; to keeps router navigation, unmatched href uses native anchors
       dom-tests: jsdom for link events and route lifecycle
+      network.ts: createFetchGraphQL; named JSON POST with text or persisted id, async headers/custom fetch, abort on unsubscribe, partial GraphQL data preserved
       tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (builds codegen first; generates skills/*/vectors.json routes)
     codegen/:
       index.mjs: generate(config, persisted), manifest(config, persisted); instantiates dist/tsquid-codegen.wasm once
