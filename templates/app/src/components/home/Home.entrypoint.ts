@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { resource, type RouteEntryPoint } from '@tsquid/routes/entrypoint';
+import { resource, type Empty, type RouteEntryPoint } from '@tsquid/routes/entrypoint';
 
 import { type HomeEntryPointParams } from '../../routes/__generated__/routes';
 
@@ -10,9 +10,7 @@ export function HomeEntryPoint() {
 }
 
 // A static route: no queries to preload.
-export const HOME_ENTRY_POINT: RouteEntryPoint<HomeEntryPointParams, Empty, Empty, Empty, Empty> = {
+export const HOME_ENTRY_POINT: RouteEntryPoint<HomeEntryPointParams, Empty> = {
   root: resource('HomePage', HomeEntryPoint),
   getPreloadProps: () => ({}),
 };
-
-type Empty = Record<string, never>;

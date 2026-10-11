@@ -1,4 +1,4 @@
-import type { EntryPointProps, RouteEntryPoint } from '../runtime/entrypoint';
+import type { Empty, EntryPointProps, EntryPointPropsOf, RouteEntryPoint } from '../runtime/entrypoint';
 import type { PreloadedQuery } from 'react-relay';
 import type { ConcreteRequest } from 'relay-runtime';
 
@@ -22,6 +22,28 @@ const invalid: RouteEntryPoint<{ id: string }, { detail: Query }, Record<string,
   getPreloadProps: () => ({ queries: { detail: { parameters: request, variables: { filter: 'x' } } } }),
 };
 void invalid;
+
+const defaultEntry: RouteEntryPoint<{ id: string }, { detail: Query }> = {
+  root: { getModuleId: () => 'defaults', getModuleIfRequired: () => () => null, load: async () => () => null },
+  getPreloadProps: route => ({ queries: { detail: { parameters: request, variables: { id: route.id } } } }),
+};
+function DefaultProps(props: EntryPointPropsOf<typeof defaultEntry>) {
+  const query: PreloadedQuery<Query> = props.queries.detail;
+  const nested: Empty = props.entryPoints;
+  const passed: Empty = props.props;
+  const extra: Empty = props.extraProps;
+  // @ts-expect-error Default extraProps cannot hold route fields.
+  const bad: typeof extra = { id: '1' };
+  void [query, nested, passed, bad];
+  return null;
+}
+function CustomProps(props: EntryPointPropsOf<typeof entryPoint>) {
+  const extra: null = props.extraProps;
+  const query: PreloadedQuery<Query> | undefined = props.queries.detail;
+  void [extra, query];
+  return null;
+}
+void [defaultEntry, DefaultProps, CustomProps];
 
 
 // Generated entrypoint hooks return a union narrowed by the generated enum.

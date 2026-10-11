@@ -73,7 +73,11 @@ if (route.currentRoute === RouteName.ArticleSearch) {
 ## Entrypoints
 
 ```ts
-export const ARTICLE_ENTRY_POINT: RouteEntryPoint<ArticleEntryPointParams, Queries, Nested, RuntimeProps, ExtraProps> = {
+export function ArticleEntryPoint({ queries }: EntryPointPropsOf<typeof ARTICLE_ENTRY_POINT>) {
+  return createElement(ArticlePage, { queries });
+}
+
+export const ARTICLE_ENTRY_POINT: RouteEntryPoint<ArticleEntryPointParams, Queries> = {
   root: resource('ArticlePage', ArticleEntryPoint),
   getPreloadProps: route => {
     switch (route.currentRoute) {
@@ -89,6 +93,11 @@ export const ARTICLE_ROUTES = {
   search: defineRoute({ uri: ArticleSearchURI, context: ArticleSearchRouteContext, entryPoint: ARTICLE_ENTRY_POINT }),
 };
 ```
+
+- Unused slots default to the exported `Empty` (`Record<string, never>`):
+  `EntryPointProps<Q, N = Empty, P = Empty, E = Empty>` and
+  `RouteEntryPoint<R, Q, N = Empty, P = Empty, E = Empty>`.
+- `EntryPointPropsOf<typeof entrypoint>` extracts the root component's props.
 
 For derived route types, provide `getRouteType` and type the entrypoint with that
 result instead:
