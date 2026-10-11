@@ -14,4 +14,3 @@ export const HOME_ENTRY_POINT: RouteEntryPoint<HomeEntryPointParams, Empty> = {
   root: resource('HomePage', HomeEntryPoint),
   getPreloadProps: () => ({}),
 };
-
