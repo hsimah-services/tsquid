@@ -393,6 +393,67 @@ test('active route refresh reloads parent and nested queries and preserves commi
   }
 });
 
+test('route error fallbacks retry query and module errors, reset on navigation, and otherwise rethrow', async (t) => {
+  const { JSDOM } = await import('jsdom');
+  const { act } = await import('react');
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://example.test/' });
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT };
+  globalThis.window = dom.window; globalThis.document = dom.window.document; globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const { createRoot } = await import('react-dom/client');
+  const { MemoryRouter, useNavigate } = await import('react-router');
+  const { RelayEnvironmentProvider, usePreloadedQuery } = await import('react-relay');
+  const { defineRoute } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+  let fail = true, requests = 0, retry, navigate, unhandled, failRender = false;
+  const environment = new Environment({ network: Network.create(() => Observable.create(sink => {
+    requests++; if (fail) sink.error(new Error('query failed')); else { sink.next({ data: { hello: 'recovered' } }); sink.complete(); }
+  })), store: new Store(new RecordSource()) });
+  function Page({ queries }) { const data = usePreloadedQuery(query, queries.page); if (failRender) throw new Error('render failed'); return createElement('p', null, data.hello); }
+  const entryPoint = { root: resource('errors', Page), getPreloadProps: () => ({ queries: { page: { parameters: query, variables: {}, options: { fetchPolicy: 'network-only' } } } }) };
+  const config = { uri: generated.TutorialsURI, context: generated.TutorialsRouteContext, entryPoint };
+  const definition = defineRoute(config);
+  function Navigation() { navigate = useNavigate(); return null; }
+  function fallback(props) { retry = props.retry; return createElement('button', { onClick: retry }, props.error.message); }
+  t.mock.method(console, 'error', () => {});
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const root = createRoot(document.getElementById('root'), { onCaughtError: () => {}, onUncaughtError: error => { unhandled = error; } });
+  const render = (definition, errorFallback = fallback) => act(async () => { root.render(createElement(MemoryRouter, { initialEntries: ['/tutorials'] }, createElement(RelayEnvironmentProvider, { environment }, createElement(Navigation), createElement(definition.Root, { errorFallback })))); });
+  try {
+    await render(definition);
+    assert.equal(document.querySelector('button').textContent, 'query failed');
+    fail = false;
+    await act(async () => { retry(); });
+    assert.equal(document.querySelector('p').textContent, 'recovered');
+    assert.equal(requests, 2);
+    fail = true;
+    await act(async () => { navigate('/tutorials?filter=bad'); });
+    assert.equal(document.querySelector('button').textContent, 'query failed');
+    fail = false;
+    await act(async () => { navigate('/tutorials?filter=good'); });
+    assert.equal(document.querySelector('p').textContent, 'recovered');
+    failRender = true;
+    await act(async () => { navigate('/tutorials?filter=render'); });
+    assert.equal(document.querySelector('button').textContent, 'render failed');
+    failRender = false;
+    await act(async () => { retry(); });
+    assert.equal(document.querySelector('p').textContent, 'recovered');
+    let loads = 0;
+    const lazy = defineRoute({ ...config, entryPoint: { ...entryPoint, root: lazyResource('module-error', () => ++loads === 1 ? Promise.reject(new Error('module failed')) : Promise.resolve(Page)) } });
+    await render(lazy);
+    assert.equal(document.querySelector('button').textContent, 'module failed');
+    await act(async () => { retry(); });
+    assert.equal(document.querySelector('p').textContent, 'recovered');
+    assert.equal(loads, 2);
+    fail = true;
+    await assert.rejects(async () => { await render(defineRoute(config), null); }, /query failed/);
+    void unhandled;
+    assert.equal(document.querySelector('button'), null);
+  } finally {
+    await act(async () => { root.unmount(); });
+    t.mock.timers.tick(300_001); t.mock.timers.reset();
+    dom.window.close(); globalThis.window = previous.window; globalThis.document = previous.document; globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act;
+  }
+});
+
 
 test('context updates preserve unowned repeated keys and remove owned collections', async () => {
   const { defineRoute } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));

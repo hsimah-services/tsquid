@@ -133,7 +133,9 @@ getRouteType: (input, currentRoute) => ({ currentRoute, ...input, tags: new Set(
   `RelayEnvironmentProvider`. It accepts `fallback`. It loads with
   `useEntryPointLoader` in a layout effect (disposed on replace and unmount), so
   data already in the store or answered synchronously renders without the
-  fallback. Errors reach the router's error boundary. `useRouteType()` reads the
+  fallback. Pass `errorFallback: ({ error, retry }) => ReactNode` to render route
+  loading/rendering errors with a network-only retry. Errors reset on navigation;
+  without a fallback they reach the router's error boundary. `useRouteType()` reads the
   derived route type.
 
 ## Links
