@@ -24,7 +24,7 @@ test('anchor link props route, preload, forward refs and leave other destination
   const ref = createRef();
   function Probe() { location = useLocation().pathname; return null; }
   const root = createRoot(document.getElementById('root'));
-  const render = props => act(async () => { root.render(createElement(MemoryRouter, null,
+  const render = (props, routerProps = {}) => act(async () => { root.render(createElement(MemoryRouter, routerProps,
     createElement(RelayEnvironmentProvider, { environment }, createElement(Link, props, 'Profile'), createElement(Probe)))); });
   try {
     await render({ href: '/profile?q=x', className: 'nav', ref, onClick: () => { clicks++; } });
@@ -46,16 +46,56 @@ test('anchor link props route, preload, forward refs and leave other destination
     }
     await render({ href: 'https://example.test/profile?q=x' });
     assert.equal(document.querySelector('a').getAttribute('href'), '/profile?q=x');
-    await render({ to: '/profile?q=x', onFocus: event => event.preventDefault() });
+    await render({ to: '/unlisted' });
+    assert.equal(document.querySelector('a').hasAttribute('data-discover'), true);
+    await act(async () => { document.querySelector('a').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })); });
+    assert.equal(location, '/unlisted');
+    await render({ href: '/unlisted' });
+    assert.equal(document.querySelector('a').hasAttribute('data-discover'), false);
+    await act(async () => { root.render(null); });
+    await render({ to: '/profile?q=x' }, { basename: '/app', initialEntries: ['/app/'] });
+    assert.equal(document.querySelector('a').getAttribute('href'), '/app/profile?q=x');
+    await act(async () => { document.querySelector('a').dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true })); });
+    assert.equal(preloads, 2);
+    await act(async () => { document.querySelector('a').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })); });
+    assert.equal(location, '/profile');
+    await render({ href: '/profile?q=x' }, { basename: '/app' });
+    assert.equal(document.querySelector('a').getAttribute('href'), '/app/profile?q=x');
+    await render({ to: '/profile?q=x', onFocus: event => event.preventDefault() }, { basename: '/app' });
     await act(async () => { document.querySelector('a').dispatchEvent(new dom.window.FocusEvent('focusin', { bubbles: true })); });
-    assert.equal(preloads, 1);
+    assert.equal(preloads, 2);
   } finally {
     await act(async () => { root.unmount(); });
-    assert.equal(disposals, 1);
+    assert.equal(disposals, 2);
     dom.window.close();
     globalThis.window = previous.window;
     globalThis.document = previous.document;
     globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act;
+  }
+});
+test('links retry failed speculative queries on the next hover', async () => {
+  const { JSDOM } = await import('jsdom');
+  const { act } = await import('react');
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://example.test/' });
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT };
+  globalThis.window = dom.window; globalThis.document = dom.window.document; globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const { createRoot } = await import('react-dom/client');
+  const { MemoryRouter } = await import('react-router');
+  const { RelayEnvironmentProvider } = await import('react-relay');
+  const { createLink } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/Link.mjs`));
+  let fail, requests = 0;
+  const { environment, stats } = setup(() => Observable.create(sink => { requests++; fail = () => sink.error(new Error('failed')); }));
+  const Link = createLink([{ path: '/profile', preload: (env, _uri, onFailure) => preloadEntryPoint(env, child, {}, onFailure) }]);
+  const root = createRoot(document.getElementById('root'));
+  try {
+    await act(async () => { root.render(createElement(MemoryRouter, null, createElement(RelayEnvironmentProvider, { environment }, createElement(Link, { to: '/profile' }, 'Profile')))); });
+    const hover = () => act(async () => { document.querySelector('a').dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true })); });
+    await hover(); assert.equal(requests, 1);
+    fail(); assert.equal(stats().retains, 0);
+    await hover(); assert.equal(requests, 2);
+  } finally {
+    await act(async () => { root.unmount(); });
+    dom.window.close(); globalThis.window = previous.window; globalThis.document = previous.document; globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act;
   }
 });
 test('lazy resources share hover and navigation loads and retry failures', async () => {
@@ -156,23 +196,27 @@ test('cycles fail and release already acquired retains', () => {
 test('failed speculative query and module loads release all acquired retains', async () => {
   const failedModule = lazyResource('failed-preload', () => Promise.reject(new Error('module failed')));
   const { environment, stats } = setup();
-  const dispose = preloadEntryPoint(environment, { ...child, root: failedModule }, {});
+  let failures = 0;
+  const dispose = preloadEntryPoint(environment, { ...child, root: failedModule }, {}, () => { failures++; });
   assert.equal(stats().retains, 1);
   await assert.rejects(failedModule.load(), /module failed/);
   assert.deepEqual(stats(), { requests: 1, retains: 0, cancelled: 1 });
   dispose();
+  assert.equal(failures, 1);
   const synchronous = setup(() => Observable.create(sink => { sink.error(new Error('query failed')); }));
   let nested = false;
   const point = { ...child, getPreloadProps: () => ({ ...child.getPreloadProps(), entryPoints: { nested: { entryPoint: { ...child, getPreloadProps: () => { nested = true; return {}; } }, entryPointParams: {} } } }) };
-  preloadEntryPoint(synchronous.environment, point, {})();
+  preloadEntryPoint(synchronous.environment, point, {}, () => { failures++; })();
+  assert.equal(failures, 2);
   assert.equal(synchronous.stats().retains, 0);
   assert.equal(nested, false);
   let fail;
   const asynchronous = setup(() => Observable.create(sink => { fail = () => sink.error(new Error('late error')); }));
-  preloadEntryPoint(asynchronous.environment, child, {});
+  preloadEntryPoint(asynchronous.environment, child, {}, () => { failures++; });
   assert.equal(asynchronous.stats().retains, 1);
   fail();
   assert.equal(asynchronous.stats().retains, 0);
+  assert.equal(failures, 3);
 });
 
 test('native Relay loads and renders the configured nested entrypoint graph', async (t) => {
