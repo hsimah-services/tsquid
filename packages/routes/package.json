@@ -35,8 +35,8 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-relay": "^21.0.0",
     "react-router": "^8.0.0",
+    "react-relay": "^21.0.0",
     "relay-runtime": "^21.0.0"
   },
   "devDependencies": {

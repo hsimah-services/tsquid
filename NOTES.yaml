@@ -28,10 +28,10 @@ layout:
       publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
       imports: relative, .js extensions
       entrypoint-types: Empty defaults unused slots; EntryPointPropsOf extracts root props
-      lazyResource: shared root load promise, synchronous loaded component, retry on failure; speculative failures release preloads
+      lazyResource: shared root load promise, synchronous loaded component, retry on failure; speculative failures release preloads and clear link retry slots
       useRouteRefresh: active-root hook; transition reloads graph network-only, Relay owns reference disposal and fetch keys
       route-errors: Root errorFallback({error,retry}); network-only retry, reset on location key; rejected lazy loads use React use
-      createLink: to/href + anchor ref; matching same-origin routes preload, other destinations use native anchors
+      createLink: to/href + anchor ref; basename-aware matches preload; to keeps router navigation, unmatched href uses native anchors
       dom-tests: jsdom for link events and route lifecycle
       network.ts: createFetchGraphQL; named JSON POST, async headers/custom fetch, abort on unsubscribe, partial GraphQL data preserved
       tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (builds codegen first; generates skills/*/vectors.json routes)
@@ -43,7 +43,7 @@ layout:
     vite/:
       index.mjs: tsquid() = stylex -> react -> relay + dedupe + global shim
     eslint-plugin/:
-      src/: index.mjs (configs.recommended), rules.mjs (incl. no-router-link in components), check-architecture.mjs
+      src/: index.mjs (configs.recommended), rules.mjs (incl. no-router-link imports + namespace access in components), check-architecture.mjs
       bin/: tsquid-check-architecture (src/components graph)
       docs/ui-standards.md: the UI standards
       test/: RuleTester + architecture
