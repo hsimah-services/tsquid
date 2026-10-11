@@ -26,5 +26,16 @@ manifest(configJson, persistedQueriesJson); // → server manifest JSON; throws 
 
 `persistedQueriesJson` is the file's content, or `null` when the config names none.
 
+```sh
+tsquid-relay persist [relay.config.json] [--watch] # reset persistConfig.file, relay-compiler --repersist
+tsquid-relay check [relay.config.json]           # missing/stale operation ids
+```
+
+`check` reads only JSON config and `.graphql.ts` / `.graphql.js` artifacts under
+`artifactDirectory` or `src`, honoring source exclusions while including generated
+directories. It never reads application TS. `persist` requires `relay-compiler`
+on PATH and restores the previous persisted file if a one-shot compilation fails.
+Route `--check` remains independent; run both checks in CI.
+
 Output is deterministic; commit it. The config and manifest formats are in the
 [`@tsquid/routes` README](https://www.npmjs.com/package/@tsquid/routes).

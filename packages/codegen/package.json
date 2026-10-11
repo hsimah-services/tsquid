@@ -25,7 +25,8 @@
     }
   },
   "bin": {
-    "tsquid-codegen": "./bin/tsquid-codegen.mjs"
+    "tsquid-codegen": "./bin/tsquid-codegen.mjs",
+    "tsquid-relay": "./bin/tsquid-relay.mjs"
   },
   "files": [
     "bin",

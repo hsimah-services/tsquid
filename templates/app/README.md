@@ -11,10 +11,10 @@ Run commands as `scripts/toolchain.sh pnpm <cmd>`:
 
 | | |
 | --- | --- |
-| `check` | lint + architecture + relay + tsc + build |
+| `check` | lint + architecture + relay + tsc + build + persisted-id check |
 | `lint`, `lint:fix` | eslint + `tsquid-check-architecture` |
 | `routes`, `routes:check` | generate / verify `src/routes/__generated__` (TS + server manifest) |
-| `relay` | compile `graphql` tags; rewrite `persisted_queries.json` |
+| `relay`, `relay:watch`, `relay:check` | tsquid-relay persist / persist --watch / check |
 | `schema` | introspect `GRAPHQL_SCHEMA_ENDPOINT` → `schema.graphql` (placeholder until run) |
 
 ## Adding a route
