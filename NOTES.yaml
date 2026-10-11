@@ -40,6 +40,7 @@ layout:
       index.mjs: generate(config, persisted), manifest(config, persisted); instantiates dist/tsquid-codegen.wasm once
       bin/tsquid-codegen.mjs: "CONFIG OUTPUT.ts [--check]; reads config.persistedQueries; also writes OUTPUT.manifest.json (routes, ssr, resolved query)"
       bin/tsquid-relay.mjs: persist [config] [--watch] resets persisted file + runs compiler; check compares artifact ids, Relay default excludes, skips node_modules; no application TS
+      bin/tsquid-schema.mjs: fetch/check via graphql introspection; sorted SDL, normalized drift summary; check --from SDL or 30 s introspection; GRAPHQL_SCHEMA_ENDPOINT or path-preserving BASE_URL
       build: cargo build tsquid-codegen-wasm -> dist/ (gitignored); runs in test + prepack
       test/: fixture parity, errors, CLI
     vite/:
@@ -64,7 +65,7 @@ layout:
       schema.graphql: placeholder
       src/: app/ (providers, router, AppLink), relay/, routes/ (+ __generated__), components/{navigation,home,profile}; ProfilePage lazy root
       docker: node 22 + pnpm
-      scripts/: toolchain.sh (TOOLCHAIN_PUBLISH), dev.sh, fetch-schema.mjs
+      scripts/: toolchain.sh (TOOLCHAIN_PUBLISH), dev.sh; schema uses tsquid-schema fetch/check
       AGENTS.md: tsquid rules + generated ASTRYX block
       no pnpm-workspace.yaml: would split the workspace; build-template writes one
 

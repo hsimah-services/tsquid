@@ -26,7 +26,8 @@
   },
   "bin": {
     "tsquid-codegen": "./bin/tsquid-codegen.mjs",
-    "tsquid-relay": "./bin/tsquid-relay.mjs"
+    "tsquid-relay": "./bin/tsquid-relay.mjs",
+    "tsquid-schema": "./bin/tsquid-schema.mjs"
   },
   "files": [
     "bin",
@@ -46,5 +47,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "graphql": "^17.0.2"
   }
 }
