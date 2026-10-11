@@ -138,6 +138,15 @@ getRouteType: (input, currentRoute) => ({ currentRoute, ...input, tags: new Set(
   without a fallback they reach the router's error boundary. `useRouteType()` reads the
   derived route type.
 
+## Mutations
+
+`useMutationAction<Mutation>(artifact)` from `@tsquid/routes/mutation` returns
+`[commit, isPending]`. `await commit({ variables, updater?, ... })` resolves with
+the artifact's response type or rejects with network/GraphQL errors. Completion
+callbacks are replaced by the promise; after unmount promises remain unsettled.
+Store invalidation remains app code; use `useRouteRefresh()` after saving when
+the route needs fresh server data.
+
 ## Links
 
 ```ts

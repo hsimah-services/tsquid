@@ -25,7 +25,8 @@
     "./entrypoint": "./runtime/entrypoint.tsx",
     "./Link": "./runtime/Link.tsx",
     "./initialData": "./runtime/initialData.ts",
-    "./network": "./runtime/network.ts"
+    "./network": "./runtime/network.ts",
+    "./mutation": "./runtime/mutation.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -85,6 +86,10 @@
       "./network": {
         "types": "./dist/network.d.ts",
         "default": "./dist/network.js"
+      },
+      "./mutation": {
+        "types": "./dist/mutation.d.ts",
+        "default": "./dist/mutation.js"
       }
     }
   }
