@@ -28,7 +28,7 @@ layout:
       publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
       imports: relative, .js extensions
       entrypoint-types: Empty defaults unused slots; EntryPointPropsOf extracts root props
-      lazyResource: shared root load promise, synchronous loaded component, retry on failure
+      lazyResource: shared root load promise, synchronous loaded component, retry on failure; speculative failures release preloads
       createLink: to/href + anchor ref; matching same-origin routes preload, other destinations use native anchors
       dom-tests: jsdom for link events and route lifecycle
       tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (builds codegen first; generates skills/*/vectors.json routes)
