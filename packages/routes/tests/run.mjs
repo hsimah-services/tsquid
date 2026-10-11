@@ -8,10 +8,10 @@ import { generate } from '../../codegen/index.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const build = mkdtempSync(join(root, '.test-'));
 try {
-  for (const file of ['uri.ts', 'context.tsx', 'entrypoint.tsx', 'initialData.ts']) {
+  for (const file of ['uri.ts', 'context.tsx', 'entrypoint.tsx', 'initialData.ts', 'Link.tsx']) {
     const code = ts.transpileModule(readFileSync(join(root, 'runtime', file), 'utf8'), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX },
-    }).outputText;
+    }).outputText.replaceAll("'./uri.js'", "'./uri.mjs'");
     writeFileSync(join(build, file.replace(/\.tsx?$/, '.mjs')), code);
   }
   const generated = ts.transpileModule(readFileSync(join(root, 'tests/routes.generated.ts'), 'utf8'), {

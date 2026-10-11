@@ -29,6 +29,8 @@ layout:
       imports: relative, .js extensions
       entrypoint-types: Empty defaults unused slots; EntryPointPropsOf extracts root props
       lazyResource: shared root load promise, synchronous loaded component, retry on failure; speculative failures release preloads and clear link retry slots
+      createLink: to/href + anchor ref; basename-aware matches preload; to keeps router navigation, unmatched href uses native anchors
+      dom-tests: jsdom for link events and route lifecycle
       tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (builds codegen first; generates skills/*/vectors.json routes)
     codegen/:
       index.mjs: generate(config, persisted), manifest(config, persisted); instantiates dist/tsquid-codegen.wasm once
