@@ -28,7 +28,7 @@ layout:
       publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
       imports: relative, .js extensions
       entrypoint-types: Empty defaults unused slots; EntryPointPropsOf extracts root props
-      lazyResource: shared root load promise, synchronous loaded component, retry on failure
+      lazyResource: shared root load promise, synchronous loaded component, retry on failure; speculative failures release preloads
       useRouteRefresh: active-root hook; transition reloads graph network-only, Relay owns reference disposal and fetch keys
       route-errors: Root errorFallback({error,retry}); network-only retry, reset on location key; rejected lazy loads use React use
       createLink: to/href + anchor ref; matching same-origin routes preload, other destinations use native anchors

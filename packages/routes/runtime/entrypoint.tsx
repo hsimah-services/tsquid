@@ -188,9 +188,10 @@ export function preloadEntryPoint(environment: IEnvironment, entryPoint: AnyEntr
     disposers.reverse().forEach(fn => fn());
   }
   function visit(point: AnyEntryPoint, input: Record<string, unknown>, ancestors: Set<AnyEntryPoint>) {
+    if (disposed) return;
     if (ancestors.has(point)) throw new Error('Cyclic entrypoint graph');
     const next = new Set(ancestors).add(point);
-    void point.root.load().catch(() => { /* Navigation surfaces module errors. */ });
+    void point.root.load().catch(() => { dispose(); });
     const preload = point.getPreloadProps(input);
     for (const query of Object.values(preload.queries ?? {})) {
       if (!query) continue;
@@ -203,7 +204,8 @@ export function preloadEntryPoint(environment: IEnvironment, entryPoint: AnyEntr
       const subscription = fetchQuery(environment, query.parameters, query.variables, {
         fetchPolicy: query.options?.fetchPolicy === 'network-only' || query.options?.fetchPolicy === 'store-and-network' ? 'network-only' : 'store-or-network',
         networkCacheConfig: query.options?.networkCacheConfig ?? undefined,
-      }).subscribe({ error: () => { /* Speculative failures retry on navigation. */ } });
+      }).subscribe({ error: () => { dispose(); } });
+      if (disposed) { subscription.unsubscribe(); return; }
       disposers.push(() => subscription.unsubscribe());
     }
     for (const nested of Object.values(preload.entryPoints ?? {})) {
