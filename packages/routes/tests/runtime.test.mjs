@@ -6,6 +6,58 @@ import { Environment, Network, RecordSource, Store, Observable } from 'relay-run
 const { createURI, normalizePathname } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/uri.mjs`));
 const { preloadEntryPoint, resource } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
 const { lazyResource } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+test('anchor link props route, preload, forward refs and leave other destinations native', async () => {
+  const { JSDOM } = await import('jsdom');
+  const { act, createRef } = await import('react');
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://example.test/' });
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT };
+  globalThis.window = dom.window;
+  globalThis.document = dom.window.document;
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const { createRoot } = await import('react-dom/client');
+  const { MemoryRouter, useLocation } = await import('react-router');
+  const { RelayEnvironmentProvider } = await import('react-relay');
+  const { createLink } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/Link.mjs`));
+  let location, clicks = 0, preloads = 0, disposals = 0;
+  const Link = createLink([{ path: '/profile', preload: (_environment, uri) => { assert.equal(uri, '/profile?q=x'); preloads++; return () => { disposals++; }; } }]);
+  const { environment } = setup();
+  const ref = createRef();
+  function Probe() { location = useLocation().pathname; return null; }
+  const root = createRoot(document.getElementById('root'));
+  const render = props => act(async () => { root.render(createElement(MemoryRouter, null,
+    createElement(RelayEnvironmentProvider, { environment }, createElement(Link, props, 'Profile'), createElement(Probe)))); });
+  try {
+    await render({ href: '/profile?q=x', className: 'nav', ref, onClick: () => { clicks++; } });
+    const anchor = document.querySelector('a');
+    assert.equal(ref.current, anchor);
+    assert.equal(anchor.className, 'nav');
+    assert.equal(anchor.getAttribute('href'), '/profile?q=x');
+    await act(async () => { anchor.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true })); anchor.dispatchEvent(new dom.window.FocusEvent('focusin', { bubbles: true })); });
+    assert.equal(preloads, 1);
+    await act(async () => { anchor.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })); });
+    assert.equal(clicks, 1);
+    assert.equal(location, '/profile');
+    for (const props of [{ href: '/auth/login' }, { href: 'https://other.test/profile' }, { href: '/profile?q=x', download: true }, { href: '/profile?q=x', download: '' }, { href: '/profile?q=x', target: '_blank' }, { href: '/profile?q=x', reloadDocument: true }, {}]) {
+      await render(props);
+      const anchor = document.querySelector('a');
+      assert.equal(anchor.hasAttribute('data-discover'), false);
+      await act(async () => { anchor.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true })); });
+      assert.equal(preloads, 1);
+    }
+    await render({ href: 'https://example.test/profile?q=x' });
+    assert.equal(document.querySelector('a').getAttribute('href'), '/profile?q=x');
+    await render({ to: '/profile?q=x', onFocus: event => event.preventDefault() });
+    await act(async () => { document.querySelector('a').dispatchEvent(new dom.window.FocusEvent('focusin', { bubbles: true })); });
+    assert.equal(preloads, 1);
+  } finally {
+    await act(async () => { root.unmount(); });
+    assert.equal(disposals, 1);
+    dom.window.close();
+    globalThis.window = previous.window;
+    globalThis.document = previous.document;
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act;
+  }
+});
 test('lazy resources share hover and navigation loads and retry failures', async () => {
   let calls = 0, resolve;
   const component = () => null;
