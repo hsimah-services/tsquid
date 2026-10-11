@@ -25,6 +25,11 @@ components/
 - `index.ts` barrels may only re-export public modules explicitly.
 - Relative imports only; no path aliases. Dynamic imports must use literal paths.
 
+## Links
+
+- Components use Astryx `Link`; install `createLink` as its `LinkProvider` component
+  in `src/app/`. Direct React Router `Link` / `NavLink` use belongs in `src/app/`.
+
 ## Modules
 
 Order:

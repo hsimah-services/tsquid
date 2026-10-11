@@ -17,7 +17,7 @@ function walk(node, source, visit) {
 }
 
 function importedName(source, node, from) {
-  if (node?.type === 'Identifier') {
+  if (node?.type === 'Identifier' || node?.type === 'JSXIdentifier') {
     let scope = source.getScope(node);
     while (scope) {
       const variable = scope.set.get(node.name);
@@ -241,6 +241,29 @@ export const rules = {
           const name = importedName(source, node.callee, 'react-relay') ?? importedName(source, node.callee, 'relay-runtime');
           if (['useMutation', 'commitMutation'].includes(name) && !/^use[A-Z].*Mutation\.ts$/.test(path.basename(context.filename))) {
             context.report({ node, messageId: 'mutation' });
+          }
+        },
+      };
+    },
+  },
+  'no-router-link': {
+    meta: meta('Use the app preloading link in components', { link: "Use Astryx Link (through the app's createLink component) or the app's link." }),
+    create(context) {
+      if (!/(?:^|\/)src\/components\//.test(context.filename.replaceAll('\\', '/'))) return {};
+      const source = context.sourceCode;
+      function namespaceLink(node) {
+        const name = node.computed ? node.property.value : node.property.name;
+        if (['Link', 'NavLink'].includes(name) && ['react-router', 'react-router-dom'].some(from => importedName(source, node.object, from) === '*')) context.report({ node, messageId: 'link' });
+      }
+      return {
+        JSXMemberExpression: namespaceLink,
+        MemberExpression: namespaceLink,
+        ImportDeclaration(node) {
+          if (node.importKind === 'type' || !['react-router', 'react-router-dom'].includes(node.source.value)) return;
+          for (const specifier of node.specifiers) {
+            if (specifier.type === 'ImportSpecifier' && specifier.importKind !== 'type' && ['Link', 'NavLink'].includes(specifier.imported.name ?? specifier.imported.value)) {
+              context.report({ node: specifier, messageId: 'link' });
+            }
           }
         },
       };

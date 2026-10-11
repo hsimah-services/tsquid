@@ -21,6 +21,7 @@ export default [...tsquid.configs.recommended];
 | `tsquid/module-exports` | named exports match the filename |
 | `tsquid/local-component-names` | local components named `Owner_Part` |
 | `tsquid/render-only-components` | no effects, requests or transforms in components |
+| `tsquid/no-router-link` | components use Astryx or the app preloading link |
 
 - `tsquid-check-architecture` checks the import graph under `src/components`:
   entity directories, `__private__` and feature-folder boundaries, and that

@@ -23,6 +23,7 @@ plugin.configs.recommended = [
       'tsquid/module-exports': 'error',
       'tsquid/local-component-names': 'error',
       'tsquid/render-only-components': 'error',
+      'tsquid/no-router-link': 'error',
     },
   },
   {
