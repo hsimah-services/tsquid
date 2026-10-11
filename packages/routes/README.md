@@ -157,28 +157,36 @@ const AppLink = createLink([ARTICLE_ROUTES.search, ...]);
   hover and focus. Routes are matched in order, so put static paths before
   dynamic ones that conflict.
 - Accepts `to` or anchor `href` props and forwards `ref`, so it can be used as
-  Astryx's `LinkProvider` component. Matching same-origin links route and preload;
-  unmatched, external, download, non-`_self` and `reloadDocument` links use `<a>`.
+  Astryx's `LinkProvider` component. `to` keeps router navigation; same-origin
+  matched `href` links route and preload. Unmatched `href`, external, download,
+  non-`_self` and `reloadDocument` links use `<a>`.
 - Preloading uses `fetchQuery` plus `retain`, per Relay's
   [retention contract](https://relay.dev/docs/api-reference/fetch-query/). It is
-  released on destination or environment change, on unmount, or after 30 s.
+  released on failure, destination or environment change, unmount, or after 30 s.
+  Failed speculative loads allow the next hover to retry.
   Duplicate requests are deduplicated by Relay.
 - Skipped for external links, downloads, `reloadDocument`, non-`_self` targets and
   `preventDefault`. Preload errors are swallowed; navigation retries.
 - Requires concrete query artifacts (not preloadable IDs) and a single Relay
   environment. A cyclic entrypoint graph throws and releases what it acquired.
 
-## Initial data
+## Network
 
 `createFetchGraphQL({ url, fetch?, headers?, credentials? })` from
 `@tsquid/routes/network` posts `{ query, operationName, variables }` and returns a
-Relay observable. Unsubscribing aborts the request; credentials default to
+Relay observable. Persisted-only operations send `{ id, operationName, variables }`.
+Unsubscribing aborts the request; credentials default to
 `same-origin`. `headers(request)` may be asynchronous (for mutation CSRF tokens).
 HTTP failures and responses without data throw; partial data plus errors passes
-through to Relay. Compose it with `withInitialData` below.
+through to Relay.
 
 For sign-out cancellation, supply a fetch wrapper that combines `init.signal`
 with an app-owned signal via `AbortSignal.any`; abort the latter on sign-out.
+
+`withInitialData(createFetchGraphQL({ url: "/graphql" }), readInitialData())` composes
+network fetching with server-inlined responses.
+
+## Initial data
 
 tsquid renders on the client. A server, in any language, can run a route's
 `query` and inline the response, so the route renders without waiting on it. The
