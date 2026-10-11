@@ -39,7 +39,8 @@ tsquid-codegen routes.json src/routes/__generated__/routes.ts [--check]
   encoding throw. Nothing is coerced.
 - An optional path segment is modelled as a separate route.
 - `entryPoint` is a normalized path relative to the config, named
-  `<Name>.entrypoint.ts`. Basenames must be unique.
+  `<Name>.entrypoint.ts` or `<Name>.entrypoint.tsx`. Basenames must be unique,
+  including across `.ts` and `.tsx`.
 - `ssr` (default `true`): whether servers may inline initial data for the route.
 - `query` (optional): the Relay operation a server runs for the route. See
   [Initial data](#initial-data).

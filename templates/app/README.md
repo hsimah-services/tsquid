@@ -21,7 +21,7 @@ Run commands as `scripts/toolchain.sh pnpm <cmd>`:
 
 1. Add it to `routes.json`, then run `pnpm routes`. For a server-inlined query,
    set `query` and run `pnpm relay` first.
-2. Create `src/components/<entity>/<Entity>.entrypoint.ts` with `getPreloadProps`.
+2. Create `src/components/<entity>/<Entity>.entrypoint.ts` or `.tsx` with `getPreloadProps`.
 3. Call `defineRoute` in `src/routes/<entity>Routes.ts`, then register it in
    `src/app/router.tsx` and in the `createLink` list in `src/app/AppLink.tsx`.
 4. Link to it with `<Route>URI.getURI(input)`.

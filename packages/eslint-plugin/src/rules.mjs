@@ -3,7 +3,7 @@ import path from 'node:path';
 const SHOUTING_SNAKE_CASE = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$/;
 const FUNCTIONS = new Set(['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression']);
 const unwrap = (node) => node.declaration ?? node;
-const stem = (filename) => path.basename(filename).replace(/\.entrypoint\.ts$/, 'EntryPoint').replace(/\.[^.]+$/, '');
+const stem = (filename) => path.basename(filename).replace(/\.entrypoint\.tsx?$/, 'EntryPoint').replace(/\.[^.]+$/, '');
 const shouting = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/([A-Z])([A-Z][a-z])/g, '$1_$2').toUpperCase();
 const meta = (description, messages, fixable) => ({ type: 'suggestion', docs: { description }, schema: [], messages, ...(fixable ? { fixable: 'code' } : {}) });
 

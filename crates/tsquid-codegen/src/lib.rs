@@ -279,9 +279,9 @@ fn generate(config: &Config, queries: &BTreeMap<String, ManifestQuery>) -> Resul
         let entry_point = Path::new(module)
             .file_name()
             .and_then(|s| s.to_str())
-            .and_then(|s| s.strip_suffix(".entrypoint.ts"))
+            .and_then(|s| s.strip_suffix(".entrypoint.ts").or_else(|| s.strip_suffix(".entrypoint.tsx")))
             .filter(|s| identifier(s))
-            .ok_or("Entrypoint modules must be named <Name>.entrypoint.ts")?;
+            .ok_or("Entrypoint modules must be named <Name>.entrypoint.ts or <Name>.entrypoint.tsx")?;
         if module.contains('\\')
             || Path::new(module).is_absolute()
             || module
@@ -611,7 +611,7 @@ mod tests {
         for module in [
             "Tutorial",
             "Tutorial.ts",
-            "Tutorial.entrypoint.tsx",
+            "Tutorial.entrypoint.jsx",
             "bad-name.entrypoint.ts",
             "/Tutorial.entrypoint.ts",
             "../Tutorial.entrypoint.ts",
@@ -624,5 +624,15 @@ mod tests {
             serde_json::from_str(include_str!("../../../packages/routes/tests/routes.json")).unwrap();
         config.routes[1].entry_point = "other/Tutorial.entrypoint.ts".into();
         assert!(generate(&config, &BTreeMap::new()).unwrap_err().contains("ambiguous"));
+        config.routes[1].entry_point = "components/Tutorial.entrypoint.tsx".into();
+        assert!(generate(&config, &BTreeMap::new()).unwrap_err().contains("ambiguous"));
+    }
+
+    #[test]
+    fn tsx_entrypoints_keep_the_same_generated_names() {
+        let mut config = config("/tutorials", "{}");
+        let original = generate(&config, &BTreeMap::new()).unwrap();
+        config.routes[0].entry_point = "Tutorial.entrypoint.tsx".into();
+        assert_eq!(generate(&config, &BTreeMap::new()).unwrap(), original);
     }
 }
