@@ -24,6 +24,10 @@ test('Relay check detects missing/stale ids, excludes source dirs, and supports 
     const drift = run('check');
     assert.equal(drift.status, 1);
     assert.match(drift.stderr, /missing: q1; stale: stale/);
+    write('node_modules/x/__generated__/Dep.graphql.js', 'const node = { "params": { "id": "dependency" } };');
+    write('relay.config.json', JSON.stringify({ src: '.', persistConfig: config.persistConfig }));
+    write('persisted.json', JSON.stringify({ q1: 'query Query { id }' }));
+    assert.equal(run('check').status, 0);
     write('custom/Query.graphql.js', 'const node = { "params": { "id": "custom" } };');
     write('relay.config.json', JSON.stringify({ ...config, artifactDirectory: 'custom' }));
     write('persisted.json', JSON.stringify({ custom: 'query Custom { id }' }));

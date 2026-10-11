@@ -8,6 +8,7 @@
     "build": "pnpm relay && tsc --noEmit && vite build",
     "preview": "vite preview",
     "relay": "tsquid-relay persist",
+    "relay:check": "tsquid-relay check",
     "relay:watch": "tsquid-relay persist --watch",
     "routes": "tsquid-codegen routes.json src/routes/__generated__/routes.ts",
     "routes:check": "tsquid-codegen routes.json src/routes/__generated__/routes.ts --check",
@@ -15,9 +16,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --max-warnings 0 && tsquid-check-architecture",
     "lint:fix": "eslint src --fix --max-warnings 0 && tsquid-check-architecture",
-    "check": "pnpm lint && pnpm build && pnpm relay:check",
-    "test": "pnpm check",
-    "relay:check": "tsquid-relay check"
+    "check": "pnpm lint && pnpm relay:check && pnpm build",
+    "test": "pnpm check"
   },
   "dependencies": {
     "@astryxdesign/core": "0.6.0",
