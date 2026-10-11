@@ -1,4 +1,4 @@
-import { createContext, Suspense, useContext, useLayoutEffect, useMemo, type ReactNode, type ComponentType } from 'react';
+import { createContext, Suspense, useContext, useLayoutEffect, useMemo, type ReactNode, type ComponentType, type ComponentProps } from 'react';
 import { EntryPointContainer, fetchQuery, useEntryPointLoader, useRelayEnvironment, type PreloadedQuery, type ThinQueryParams, type JSResourceReference } from 'react-relay';
 import { createOperationDescriptor, getRequest, type IEnvironment, type OperationType } from 'relay-runtime';
 import { useLocation } from 'react-router';
@@ -7,17 +7,18 @@ import type { RouteContext } from './context.js';
 
 // Structural types avoid Relay 21's circular EntryPoint declaration (rejected by TS7).
 // They describe the same public Relay contract; casts are confined to hook/container adapters.
-export type EntryPointProps<Q, N, P, E> = {
+export type Empty = Record<string, never>;
+export type EntryPointProps<Q, N = Empty, P = Empty, E = Empty> = {
   queries: { [K in keyof Q]: NonNullable<Q[K]> extends OperationType ? PreloadedQuery<NonNullable<Q[K]>> : never };
   entryPoints: { [K in keyof N]: N[K] extends AnyEntryPoint | undefined ? EntryPointReference<NonNullable<N[K]>> : never };
   props: P;
   extraProps: E;
 };
-type EntryPointReference<T extends AnyEntryPoint> = {
+type EntryPointReference<T extends AnyEntryPoint> = T extends AnyEntryPoint ? {
   dispose(): void;
   getComponent(): T['root'] extends JSResourceReference<infer C> ? C : never;
-};
-export type RouteEntryPoint<R extends Record<string, unknown>, Q extends Record<string, OperationType | undefined>, N extends Record<string, AnyEntryPoint | undefined>, P, E> = {
+} : never;
+export type RouteEntryPoint<R extends Record<string, unknown>, Q extends Record<string, OperationType | undefined>, N extends Record<string, AnyEntryPoint | undefined> = Empty, P = Empty, E = Empty> = {
   root: JSResourceReference<ComponentType<EntryPointProps<Q, N, P, E>>>;
   getPreloadProps: (route: R) => {
     queries?: { [K in keyof Q]: ThinQueryParams<NonNullable<Q[K]>> };
@@ -33,6 +34,7 @@ type AnyEntryPoint = {
     entryPoints?: Record<string, { entryPoint: AnyEntryPoint; entryPointParams: Record<string, unknown> } | undefined>;
   };
 };
+export type EntryPointPropsOf<T extends AnyEntryPoint> = T['root'] extends JSResourceReference<infer C extends AnyComponent> ? ComponentProps<C> : never;
 
 export function RouteEntryPointContainer({ entryPointReference, props }: { entryPointReference: EntryPointReference<AnyEntryPoint>; props: Record<string, unknown> }) {
   const Container = EntryPointContainer as unknown as ComponentType<{ entryPointReference: unknown; props: unknown }>;

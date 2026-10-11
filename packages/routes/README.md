@@ -72,6 +72,11 @@ if (route.currentRoute === RouteName.ArticleSearch) {
 
 ## Entrypoints
 
+`EntryPointProps<Q, N = Empty, P = Empty, E = Empty>` and
+`RouteEntryPoint<R, Q, N = Empty, P = Empty, E = Empty>` default unused slots to
+the exported `Empty` (`Record<string, never>`). `EntryPointPropsOf<typeof entrypoint>`
+extracts the root component's props.
+
 ```ts
 export const ARTICLE_ENTRY_POINT: RouteEntryPoint<RouteType, Queries, Nested, RuntimeProps, ExtraProps> = {
   root: resource('ArticlePage', ArticleEntryPoint),
