@@ -1,4 +1,4 @@
-import { createContext, Suspense, startTransition, useCallback, useContext, useLayoutEffect, useMemo, type ReactNode, type ComponentType, type ComponentProps } from 'react';
+import { Component, createContext, Suspense, startTransition, use, useCallback, useContext, useLayoutEffect, useMemo, type ReactNode, type ComponentType, type ComponentProps } from 'react';
 import { EntryPointContainer, fetchQuery, useEntryPointLoader, useRelayEnvironment, type PreloadedQuery, type ThinQueryParams, type JSResourceReference } from 'react-relay';
 import { createOperationDescriptor, getRequest, type IEnvironment, type OperationType } from 'relay-runtime';
 import { useLocation } from 'react-router';
@@ -58,6 +58,11 @@ function networkOnly(point: AnyEntryPoint): AnyEntryPoint {
 }
 
 export function RouteEntryPointContainer({ entryPointReference, props }: { entryPointReference: EntryPointReference<AnyEntryPoint>; props: Record<string, unknown> }) {
+  try { entryPointReference.getComponent(); } catch (error) {
+    // React's use surfaces rejected module loads to the nearest error boundary.
+    if (error && typeof error === 'object' && 'then' in error && typeof error.then === 'function') use(error as Promise<unknown>);
+    else throw error;
+  }
   const Container = EntryPointContainer as unknown as ComponentType<{ entryPointReference: unknown; props: unknown }>;
   return <Container entryPointReference={entryPointReference} props={props} />;
 }
@@ -79,8 +84,25 @@ export function lazyResource<C>(id: string, loader: () => Promise<C>): JSResourc
   };
 }
 
+export type RouteErrorFallbackProps = { error: Error; retry: () => void };
+type RouteRootProps = { fallback?: ReactNode; errorFallback?: (props: RouteErrorFallbackProps) => ReactNode };
+class RouteErrorBoundary extends Component<{ resetKey: string; errorFallback?: RouteRootProps['errorFallback']; children: (attempt: number) => ReactNode }, { error: Error | null; attempt: number; resetKey: string }> {
+  state: { error: Error | null; attempt: number; resetKey: string } = { error: null, attempt: 0, resetKey: this.props.resetKey };
+  static getDerivedStateFromError(error: unknown) { return { error: error instanceof Error ? error : new Error(String(error)) }; }
+  static getDerivedStateFromProps(props: { resetKey: string }, state: { resetKey: string }) {
+    return props.resetKey === state.resetKey ? null : { error: null, attempt: 0, resetKey: props.resetKey };
+  }
+  render() {
+    if (this.state.error) {
+      if (!this.props.errorFallback) throw this.state.error;
+      return this.props.errorFallback({ error: this.state.error, retry: () => { this.setState(state => ({ error: null, attempt: state.attempt + 1 })); } });
+    }
+    return this.props.children(this.state.attempt);
+  }
+}
+
 type DefinedRoute<I, R> = URI<I> & {
-  Root: ComponentType<{ fallback?: ReactNode }>;
+  Root: ComponentType<RouteRootProps>;
   useRouteType(): R;
   preload(environment: IEnvironment, uri: string): () => void;
 };
@@ -115,7 +137,11 @@ export function defineRoute<I, N extends string>(config: {
     if (!value) throw new Error('Route is not active');
     return value;
   }
-  function Root({ fallback = null }: { fallback?: ReactNode }) {
+  function Root({ fallback = null, errorFallback }: RouteRootProps) {
+    const location = useLocation();
+    return <RouteErrorBoundary resetKey={location.key} errorFallback={errorFallback}>{attempt => <RootContent fallback={fallback} attempt={attempt} />}</RouteErrorBoundary>;
+  }
+  function RootContent({ fallback, attempt }: { fallback: ReactNode; attempt: number }) {
     const location = useLocation();
     const environment = useRelayEnvironment();
     const uri = location.pathname + location.search + location.hash;
@@ -125,7 +151,7 @@ export function defineRoute<I, N extends string>(config: {
     const [reference, load] = useEntryPointLoader(provider, entryPoint) as unknown as [EntryPointReference<AnyEntryPoint> | null, (params: { route: R; refresh?: boolean }) => void, () => void];
     const refresh = useCallback(() => { startTransition(() => { load({ route, refresh: true }); }); }, [load, route]);
     // Before paint: a synchronous (preloaded or inlined) response skips the fallback.
-    useLayoutEffect(() => { load({ route }); }, [load, route]);
+    useLayoutEffect(() => { load({ route, refresh: attempt > 0 }); }, [load, route, attempt]);
     const context = useMemo(() => ({ currentRoute: config.context.currentRoute, input, updateURI: (patch: Partial<I>) => getUpdatedURI(config.uri, uri, input, patch) }), [input, uri]);
     return <config.context.Context value={context}><RouteContext value={route}><RouteRefreshContext value={refresh}>
       <Suspense fallback={fallback}>{reference ? <RouteEntryPointContainer entryPointReference={reference} props={{}} /> : fallback}</Suspense>
