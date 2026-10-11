@@ -48,3 +48,9 @@ export function useProfileRouteContext(): ProfileRouteContextType {
       throw new Error('useProfileRouteContext requires the Profile entrypoint; current route is ' + currentRoute);
   }
 }
+
+export const ProfileRouteQuery = {
+  operation: "ProfileQuery",
+  getVariables: (_input: ProfileInputType) => ({
+  }),
+} as const;

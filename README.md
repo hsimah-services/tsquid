@@ -18,6 +18,8 @@ An opinionated React framework built on strongly typed route context.
   variable bindings. The server inlines the response as `#tsquid-data`, and the
   route renders without waiting on it. Server side:
   [`skills/tsquid-server-integration`](skills/tsquid-server-integration).
+  Entrypoints use `<Route>RouteQuery.getVariables(input)` for the same bindings,
+  including GraphQL defaults and nulls; `operation` names the query.
 - **Astryx + StyleX** for all UI.
 
 Stack: React 19, React Router 8, Relay 21, Astryx 0.6, StyleX 0.19, Vite 8.

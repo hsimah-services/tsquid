@@ -144,7 +144,8 @@ with conformance vectors.
   rejects queries that need anything else: required variables without a field,
   incompatible kinds, `@defer`/`@stream`, provided variables, non-queries.
 - The entrypoint must preload that query with those variables:
-  `variables: { order_by: route.order_by, preview_id: route.preview_id }`.
+  `variables: PostsRouteQuery.getVariables(route.input)`. The generated helper
+  includes every declared variable, defaults and nulls; `operation` names the query.
 - Everything else the route loads (other queries, nested entrypoints, conditional
   logic) is fetched by the client and suspends where it's read. Read it below its
   own `<Suspense>` so the rest renders first. Keep the default `fetchPolicy`

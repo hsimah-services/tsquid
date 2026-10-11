@@ -25,7 +25,9 @@ void invalid;
 
 
 // Generated entrypoint hooks return a union narrowed by the generated enum.
-import { RouteName, useTutorialRouteContext } from './routes.generated';
+import { RouteName, TutorialDetailRouteQuery, useTutorialRouteContext } from './routes.generated';
+const generatedVariables: { id: string; first?: number; after?: string | null; order?: 'POSITION' } = TutorialDetailRouteQuery.getVariables({ id: '1' });
+void generatedVariables;
 function RouteContextConsumer() {
   const route = useTutorialRouteContext();
   if (route.currentRoute === RouteName.TutorialDetail) {

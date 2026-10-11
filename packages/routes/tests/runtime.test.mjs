@@ -261,6 +261,7 @@ test('initial data is optional, read from #tsquid-data, and rejected when malfor
 // React Router picks the route, then tsquid parses it; a parse error means no route.
 // A route query's server variables must match what Relay sends for the parsed input.
 const vectors = JSON.parse((await import('node:fs')).readFileSync(new URL('../../../skills/tsquid-server-integration/vectors.json', import.meta.url), 'utf8'));
+const vectorRoutes = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/vectors.mjs`));
 test('server integration vectors match client routing, parsing and variable matching', async (t) => {
   t.mock.method(console, 'warn', () => {});
   const { matchRoutes } = await import('react-router');
@@ -277,12 +278,15 @@ test('server integration vectors match client routing, parsing and variable matc
     const server = {};
     for (const [name, { input: field, default: value }] of Object.entries(query.variables)) {
       if (field !== undefined && input[field] !== undefined) server[name] = input[field];
-      else if (value !== undefined) server[name] = value;
+      else server[name] = value ?? null;
     }
     assert.deepEqual(server, vectors.urls.find(vector => vector.url === url).variables, url);
+    const generated = vectorRoutes[`${expected}RouteQuery`].getVariables(actual.input);
+    assert.deepEqual(generated, server, url);
     const argumentDefinitions = Object.entries(query.variables).map(([name, { default: value }]) => ({ kind: 'LocalArgument', name, defaultValue: value ?? null }));
     const request = { ...variableQuery, operation: { ...variableQuery.operation, name: query.operation, argumentDefinitions }, params: { ...variableQuery.params, name: query.operation, cacheID: query.id } };
     const sent = createOperationDescriptor(request, input).request.variables;
+    assert.deepEqual(generated, sent, `${url}: generated variables match Relay`);
     const response = { data: {} };
     const fetchFn = withInitialData(() => null, { version: 1, responses: [{ operation: query.operation, variables: server, response }] });
     assert.equal(fetchFn({ name: query.operation }, sent), response, `${url}: Relay sends ${JSON.stringify(sent)}`);

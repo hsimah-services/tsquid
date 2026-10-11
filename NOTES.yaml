@@ -14,7 +14,7 @@ layout:
 
   crates/:
     tsquid-codegen/:
-      src/lib.rs: "generate_json / manifest_json ({config, persistedQueries} JSON) -> Result<String, String>; validation (incl. route queries via graphql-parser); unit tests"
+      src/lib.rs: "generate_json / manifest_json ({config, persistedQueries} JSON) -> Result<String, String>; validation (incl. route queries via graphql-parser); RouteQuery operation/getVariables; unit tests"
       tests: include_str! fixtures from packages/routes/tests
     tsquid-codegen-wasm/:
       what: cdylib, wasm32-unknown-unknown, no I/O

@@ -11,6 +11,8 @@ tsquid-codegen routes.json src/routes/__generated__/routes.ts --check   # exit 1
 Writes `routes.ts` and `routes.manifest.json` (every route's path, fields, `ssr`
 flag and resolved `query`, for servers), both or neither. Reads the Relay
 persisted-queries file named by `persistedQueries`, relative to the config.
+For each route query, emits `<Route>RouteQuery` with `operation` and
+`getVariables(input)` (declared variables, GraphQL defaults, otherwise null).
 
 ```js
 import { generate, manifest } from '@tsquid/codegen';

@@ -59,3 +59,13 @@ export function useTutorialRouteContext(): TutorialRouteContextType {
       throw new Error('useTutorialRouteContext requires the Tutorial entrypoint; current route is ' + currentRoute);
   }
 }
+
+export const TutorialDetailRouteQuery = {
+  operation: "TutorialDetailQuery",
+  getVariables: (input: TutorialDetailInputType) => ({
+    "after": null,
+    "first": 10,
+    "id": input.id,
+    "order": "POSITION" as const,
+  }),
+} as const;

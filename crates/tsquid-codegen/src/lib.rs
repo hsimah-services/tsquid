@@ -56,7 +56,25 @@ struct Request {
 /// Validates a request (`{"config", "persistedQueries"}` JSON) and returns the
 /// generated TypeScript module.
 pub fn generate_json(request: &str) -> Result<String, String> {
-    load(request).and_then(|(config, _)| generate(&config))
+    let (config, queries) = load(request)?;
+    let mut out = generate(&config)?;
+    for route in &config.routes {
+        let Some(query) = queries.get(&route.name) else { continue };
+        let parameter = if query.variables.values().any(|variable| variable.input.is_some()) { "input" } else { "_input" };
+        out += &format!("\nexport const {}RouteQuery = {{\n  operation: {},\n  getVariables: ({parameter}: {}InputType) => ({{\n", route.name, serde_json::to_string(&query.operation).unwrap(), route.name);
+        for (name, variable) in &query.variables {
+            let default = variable.default.as_ref().unwrap_or(&serde_json::Value::Null);
+            let fallback = format!("{default}{}", if default.is_string() { " as const" } else { "" });
+            let value = match &variable.input {
+                Some(field) if !route.fields[field].optional => format!("input.{field}"),
+                Some(field) => format!("input.{field} ?? {fallback}"),
+                None => fallback,
+            };
+            out += &format!("    {}: {value},\n", serde_json::to_string(name).unwrap());
+        }
+        out += "  }),\n} as const;\n";
+    }
+    Ok(out)
 }
 
 /// Validates a request (`{"config", "persistedQueries"}` JSON) and returns the server
@@ -437,9 +455,8 @@ mod tests {
     }
     #[test]
     fn generated_fixture_is_current() {
-        let config: Config = serde_json::from_str(include_str!("../../../packages/routes/tests/routes.json")).unwrap();
         assert_eq!(
-            generate(&config).unwrap(),
+            generate_json(&request(FIXTURE, Some(PERSISTED))).unwrap(),
             include_str!("../../../packages/routes/tests/routes.generated.ts")
         );
     }
@@ -485,6 +502,14 @@ mod tests {
             "draft": { "input": "draft" }, "order": { "default": "NEWEST" },
             "filter": { "default": { "a": [1, null], "b": "x" } }, "after": {}
         }));
+    }
+
+    #[test]
+    fn generates_query_variable_bindings() {
+        let config = r#"{"runtime":"x","persistedQueries":"p.json","routes":[{"name":"T","entryPoint":"T.entrypoint.ts","path":"/t/:id","fields":{"id":{"kind":"string"},"page":{"kind":"int","optional":true},"tags":{"kind":"string[]","optional":true}},"query":"Q"}]}"#;
+        let persisted = serde_json::json!({ "a": "query Q($id: ID!, $page: Int = 1, $tags: [String!], $after: String, $order: Order = NEWEST) { t { id } }" }).to_string();
+        let generated = generate_json(&request(config, Some(&persisted))).unwrap();
+        assert!(generated.ends_with("\nexport const TRouteQuery = {\n  operation: \"Q\",\n  getVariables: (input: TInputType) => ({\n    \"after\": null,\n    \"id\": input.id,\n    \"order\": \"NEWEST\" as const,\n    \"page\": input.page ?? 1,\n    \"tags\": input.tags ?? null,\n  }),\n} as const;\n"));
     }
 
     #[test]
