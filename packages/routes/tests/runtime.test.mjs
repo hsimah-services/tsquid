@@ -266,6 +266,67 @@ test('default route params agree in the active root and hover preload', async ()
   assert.deepEqual(preloaded, { filter: 'y', name: RouteName.Tutorials });
 });
 
+test('active route refresh reloads parent and nested queries and preserves committed content', async (t) => {
+  const { JSDOM } = await import('jsdom');
+  const { act, useEffect } = await import('react');
+  const { defineRoute, useRouteRefresh } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+  function Outside() { useRouteRefresh(); return null; }
+  assert.throws(() => renderToString(createElement(Outside)), /outside its active entrypoint/);
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://example.test/' });
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT };
+  globalThis.window = dom.window; globalThis.document = dom.window.document; globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const { createRoot } = await import('react-dom/client');
+  const { MemoryRouter } = await import('react-router');
+  const { RelayEnvironmentProvider, EntryPointContainer, usePreloadedQuery } = await import('react-relay');
+  const nestedQuery = { ...query, fragment: { ...query.fragment, name: 'NestedQuery', selections: [{ ...query.fragment.selections[0], name: 'nested' }] }, operation: { ...query.operation, name: 'NestedQuery', selections: [{ ...query.operation.selections[0], name: 'nested' }] }, params: { ...query.params, name: 'NestedQuery', cacheID: 'nested', text: 'query NestedQuery { nested }' } };
+  const requests = [], waiting = [];
+  let asynchronous = false, revision = 0, refresh, mounts = 0, fallbacks = 0;
+  const references = new Set();
+  const environment = new Environment({ network: Network.create(request => Observable.create(sink => {
+    requests.push(request.name);
+    const finish = () => { sink.next({ data: { hello: `v${revision}`, nested: `v${revision}` } }); sink.complete(); };
+    if (asynchronous) waiting.push(finish); else finish();
+  })), store: new Store(new RecordSource()) });
+  function Nested({ queries }) { references.add(queries.nested); return createElement('span', null, usePreloadedQuery(nestedQuery, queries.nested).nested); }
+  const nested = { root: resource('nested-refresh', Nested), getPreloadProps: () => ({ queries: { nested: { parameters: nestedQuery, variables: {} } } }) };
+  function Page({ queries, entryPoints }) {
+    refresh = useRouteRefresh(); references.add(queries.page);
+    useEffect(() => { mounts++; }, []);
+    return createElement('article', null, usePreloadedQuery(query, queries.page).hello, createElement(EntryPointContainer, { entryPointReference: entryPoints.child, props: {} }));
+  }
+  function Fallback() { useEffect(() => { fallbacks++; }, []); return createElement('i', null, 'loading'); }
+  const entryPoint = { root: resource('refresh-page', Page), getPreloadProps: () => ({ queries: { page: { parameters: query, variables: {} } }, entryPoints: { child: { entryPoint: nested, entryPointParams: {} } } }) };
+  const definition = defineRoute({ uri: generated.TutorialsURI, context: generated.TutorialsRouteContext, entryPoint });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const root = createRoot(document.getElementById('root'));
+  try {
+    await act(async () => { root.render(createElement(MemoryRouter, { initialEntries: ['/tutorials'] }, createElement(RelayEnvironmentProvider, { environment }, createElement(definition.Root, { fallback: createElement(Fallback) })))); });
+    assert.deepEqual(requests, ['TestQuery', 'NestedQuery']);
+    const initialRefs = [...references], initialFallbacks = fallbacks;
+    revision++;
+    await act(async () => { refresh(); });
+    assert.deepEqual(requests, ['TestQuery', 'NestedQuery', 'TestQuery', 'NestedQuery']);
+    assert.equal(mounts, 1);
+    assert.equal(fallbacks, initialFallbacks);
+    assert.ok(initialRefs.every(ref => ref.isDisposed));
+    assert.ok([...references].filter(ref => !ref.isDisposed).every(ref => ref.fetchPolicy === 'network-only'));
+    assert.equal(new Set([...references].map(ref => ref.fetchKey)).size, references.size);
+    const committed = document.querySelector('article').textContent;
+    asynchronous = true; revision++;
+    await act(async () => { refresh(); });
+    assert.equal(document.querySelector('article').textContent, committed);
+    assert.equal(fallbacks, initialFallbacks);
+    await act(async () => { waiting.forEach(finish => finish()); });
+    assert.equal(document.querySelector('article').textContent, 'v2v2');
+    assert.equal(mounts, 1);
+  } finally {
+    await act(async () => { root.unmount(); });
+    assert.ok([...references].every(ref => ref.isDisposed));
+    t.mock.timers.tick(300_001); t.mock.timers.reset();
+    dom.window.close(); globalThis.window = previous.window; globalThis.document = previous.document; globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act;
+  }
+});
+
 
 test('context updates preserve unowned repeated keys and remove owned collections', async () => {
   const { defineRoute } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));

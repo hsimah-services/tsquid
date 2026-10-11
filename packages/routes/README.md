@@ -112,6 +112,11 @@ export const ARTICLE_ROUTES = {
   (sets, enums, dates).
 - Components read route state with `use<Entry>RouteContext()`; avoid copying it
   into entrypoint `extraProps`.
+- `useRouteRefresh()` returns the active route's refresh callback. After mutations,
+  call it to reload every query, including nested entrypoints, with `network-only`.
+  React transitions keep previous content visible while loading; Relay supplies
+  fresh query fetch keys and disposes replaced references. Normal preloads retain
+  their configured/default fetch policy.
 - `defineRoute(...).Root` is the router component; mount it under
   `RelayEnvironmentProvider`. It accepts `fallback`. It loads with
   `useEntryPointLoader` in a layout effect (disposed on replace and unmount), so

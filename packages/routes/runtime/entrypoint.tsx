@@ -1,4 +1,4 @@
-import { createContext, Suspense, useContext, useLayoutEffect, useMemo, type ReactNode, type ComponentType, type ComponentProps } from 'react';
+import { createContext, Suspense, startTransition, useCallback, useContext, useLayoutEffect, useMemo, type ReactNode, type ComponentType, type ComponentProps } from 'react';
 import { EntryPointContainer, fetchQuery, useEntryPointLoader, useRelayEnvironment, type PreloadedQuery, type ThinQueryParams, type JSResourceReference } from 'react-relay';
 import { createOperationDescriptor, getRequest, type IEnvironment, type OperationType } from 'relay-runtime';
 import { useLocation } from 'react-router';
@@ -35,6 +35,27 @@ type AnyEntryPoint = {
   };
 };
 export type EntryPointPropsOf<T extends AnyEntryPoint> = T['root'] extends JSResourceReference<infer C extends AnyComponent> ? ComponentProps<C> : never;
+
+const RouteRefreshContext = createContext<(() => void) | null>(null);
+export function useRouteRefresh(): () => void {
+  const refresh = useContext(RouteRefreshContext);
+  if (!refresh) throw new Error('Route refresh used outside its active entrypoint');
+  return refresh;
+}
+
+function networkOnly(point: AnyEntryPoint): AnyEntryPoint {
+  return {
+    root: point.root,
+    getPreloadProps: params => {
+      const preload = point.getPreloadProps(params);
+      return {
+        ...preload,
+        queries: Object.fromEntries(Object.entries(preload.queries ?? {}).map(([key, query]) => [key, query && { ...query, options: { ...query.options, fetchPolicy: 'network-only' } }])),
+        entryPoints: Object.fromEntries(Object.entries(preload.entryPoints ?? {}).map(([key, nested]) => [key, nested && { ...nested, entryPoint: networkOnly(nested.entryPoint) }])),
+      };
+    },
+  };
+}
 
 export function RouteEntryPointContainer({ entryPointReference, props }: { entryPointReference: EntryPointReference<AnyEntryPoint>; props: Record<string, unknown> }) {
   const Container = EntryPointContainer as unknown as ComponentType<{ entryPointReference: unknown; props: unknown }>;
@@ -83,6 +104,11 @@ export function defineRoute<I, N extends string>(config: {
 }): DefinedRoute<I, Record<string, unknown>> {
   const getRouteType = (input: I) => config.getRouteType ? config.getRouteType(input, config.context.currentRoute) : { currentRoute: config.context.currentRoute, input };
   type R = ReturnType<typeof getRouteType>;
+  const refreshingEntryPoint = networkOnly(config.entryPoint);
+  const entryPoint = {
+    root: config.entryPoint.root,
+    getPreloadProps: ({ route, refresh }: { route: R; refresh?: boolean }) => (refresh ? refreshingEntryPoint : config.entryPoint).getPreloadProps(route),
+  };
   const RouteContext = createContext<R | null>(null);
   function useRouteType(): R {
     const value = useContext(RouteContext);
@@ -96,13 +122,14 @@ export function defineRoute<I, N extends string>(config: {
     const input = useMemo(() => config.uri.parseURI(uri), [uri]);
     const route = useMemo(() => getRouteType(input), [input]);
     const provider = useMemo(() => ({ getEnvironment: () => environment }), [environment]);
-    const [reference, load] = useEntryPointLoader(provider, config.entryPoint) as unknown as [EntryPointReference<AnyEntryPoint> | null, (route: R) => void, () => void];
+    const [reference, load] = useEntryPointLoader(provider, entryPoint) as unknown as [EntryPointReference<AnyEntryPoint> | null, (params: { route: R; refresh?: boolean }) => void, () => void];
+    const refresh = useCallback(() => { startTransition(() => { load({ route, refresh: true }); }); }, [load, route]);
     // Before paint: a synchronous (preloaded or inlined) response skips the fallback.
-    useLayoutEffect(() => { load(route); }, [load, route]);
+    useLayoutEffect(() => { load({ route }); }, [load, route]);
     const context = useMemo(() => ({ currentRoute: config.context.currentRoute, input, updateURI: (patch: Partial<I>) => getUpdatedURI(config.uri, uri, input, patch) }), [input, uri]);
-    return <config.context.Context value={context}><RouteContext value={route}>
+    return <config.context.Context value={context}><RouteContext value={route}><RouteRefreshContext value={refresh}>
       <Suspense fallback={fallback}>{reference ? <RouteEntryPointContainer entryPointReference={reference} props={{}} /> : fallback}</Suspense>
-    </RouteContext></config.context.Context>;
+    </RouteRefreshContext></RouteContext></config.context.Context>;
   }
   return {
     ...config.uri, Root, useRouteType,

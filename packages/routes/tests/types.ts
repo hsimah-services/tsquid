@@ -106,3 +106,7 @@ const tutorialRoute = defineRoute({
 });
 // @ts-expect-error Route definitions cannot update routes either.
 tutorialRoute.updateURI('/tutorials', { filter: 'turn' });
+// @ts-expect-error URI helpers do not expose active route refresh.
+TutorialsURI.refresh();
+// @ts-expect-error Inactive context definitions do not expose route refresh.
+TutorialsRouteContext.refresh();
