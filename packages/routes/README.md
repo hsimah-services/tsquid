@@ -113,8 +113,11 @@ getRouteType: (input, currentRoute) => ({ currentRoute, ...input, tags: new Set(
   to omit them conditionally.
 - `EntryPointProps<Queries, Nested, RuntimeProps, ExtraProps>` types the root
   component's props. Render nested references with `RouteEntryPointContainer`.
-- `resource(id, Component)` wraps an eager component. For a lazy one, implement
-  `JSResourceReference`.
+- `resource(id, Component)` wraps an eager component.
+  `lazyResource(id, () => import('./Page').then(m => m.Page))` shares one load
+  between preload and navigation, exposes the loaded component synchronously,
+  and retries after failure. Speculative query/module failures release their
+  preload retains and subscriptions.
 - Without `getRouteType`, params are `{ currentRoute, input }`. The generated
   `<Entry>EntryPointParams` union narrows input by `currentRoute` in `getPreloadProps`.
 - `getRouteType(input, currentRoute)` optionally maps URL input to another type

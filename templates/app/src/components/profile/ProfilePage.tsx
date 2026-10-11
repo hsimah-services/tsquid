@@ -1,4 +1,5 @@
 import { graphql, usePreloadedQuery, type PreloadedQuery } from 'react-relay';
+import type { EntryPointProps } from '@tsquid/routes/entrypoint';
 import { Heading, Stack, Text } from '@astryxdesign/core';
 import * as stylex from '@stylexjs/stylex';
 
@@ -13,12 +14,10 @@ const PROFILE_QUERY = graphql`
   }
 `;
 
-export interface ProfilePageProps {
-  queryRef: PreloadedQuery<ProfileQuery>;
-}
+export type ProfilePageProps = EntryPointProps<{ profile: ProfileQuery }>;
 
-export function ProfilePage({ queryRef }: ProfilePageProps) {
-  const { viewer } = useProfilePage(queryRef);
+export function ProfilePage({ queries }: ProfilePageProps) {
+  const { viewer } = useProfilePage(queries.profile);
   return (
     <Stack padding={6} gap={4} align="stretch" xstyle={styles.page}>
       <Heading level={1}>Profile</Heading>

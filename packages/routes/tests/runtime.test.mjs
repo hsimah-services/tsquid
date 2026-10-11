@@ -5,6 +5,32 @@ import { Environment, Network, RecordSource, Store, Observable } from 'relay-run
 
 const { createURI, normalizePathname } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/uri.mjs`));
 const { preloadEntryPoint, resource } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+const { lazyResource } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+test('lazy resources share hover and navigation loads and retry failures', async () => {
+  let calls = 0, resolve;
+  const component = () => null;
+  const root = lazyResource('lazy', () => { calls++; return new Promise(done => { resolve = done; }); });
+  assert.equal(root.getModuleId(), 'lazy');
+  assert.equal(root.getModuleIfRequired(), null);
+  const { environment } = setup();
+  const dispose = preloadEntryPoint(environment, { root, getPreloadProps: () => ({}) }, {});
+  const navigation = root.load();
+  assert.equal(root.load(), navigation);
+  await Promise.resolve();
+  assert.equal(calls, 1);
+  resolve(component);
+  assert.equal(await navigation, component);
+  assert.equal(root.getModuleIfRequired(), component);
+  assert.equal(await root.load(), component);
+  assert.equal(calls, 1);
+  dispose();
+  let attempts = 0;
+  const retry = lazyResource('retry', () => { if (++attempts === 1) throw new Error('load failed'); return Promise.resolve(component); });
+  await assert.rejects(retry.load(), /load failed/);
+  assert.equal(retry.getModuleIfRequired(), null);
+  assert.equal(await retry.load(), component);
+  assert.equal(attempts, 2);
+});
 const route = createURI('/tutorials/:level/:id', {
   level: { kind: 'int', optional: false }, id: { kind: 'string', optional: false },
   filter: { kind: 'string', optional: true }, enabled: { kind: 'bool', optional: true },
@@ -42,9 +68,9 @@ const query = {
   operation: { kind: 'Operation', name: 'TestQuery', argumentDefinitions: [], selections: [{ kind: 'ScalarField', alias: null, name: 'hello', args: null, storageKey: null }] },
   params: { name: 'TestQuery', operationKind: 'query', id: null, cacheID: 'test', text: 'query TestQuery { hello }', metadata: {} },
 };
-function setup() {
+function setup(network) {
   let requests = 0, retains = 0, cancelled = 0;
-  const environment = new Environment({ network: Network.create(() => Observable.create(() => { requests++; return () => cancelled++; })), store: new Store(new RecordSource()) });
+  const environment = new Environment({ network: Network.create(network ?? (() => Observable.create(() => { requests++; return () => cancelled++; }))), store: new Store(new RecordSource()) });
   const retain = environment.retain.bind(environment);
   environment.retain = operation => { retains++; const ref = retain(operation); return { dispose: () => { retains--; ref.dispose(); } }; };
   return { environment, stats: () => ({ requests, retains, cancelled }) };
@@ -73,6 +99,32 @@ test('cycles fail and release already acquired retains', () => {
   const cyclic = { root: resource('cycle', () => null), getPreloadProps: () => ({ ...child.getPreloadProps(), entryPoints: { self: { entryPoint: cyclic, entryPointParams: {} } } }) };
   assert.throws(() => preloadEntryPoint(environment, cyclic, {}), /Cyclic/);
   assert.equal(stats().retains, 0);
+});
+
+test('failed speculative query and module loads release all acquired retains', async () => {
+  const failedModule = lazyResource('failed-preload', () => Promise.reject(new Error('module failed')));
+  const { environment, stats } = setup();
+  let failures = 0;
+  const dispose = preloadEntryPoint(environment, { ...child, root: failedModule }, {}, () => { failures++; });
+  assert.equal(stats().retains, 1);
+  await assert.rejects(failedModule.load(), /module failed/);
+  assert.deepEqual(stats(), { requests: 1, retains: 0, cancelled: 1 });
+  dispose();
+  assert.equal(failures, 1);
+  const synchronous = setup(() => Observable.create(sink => { sink.error(new Error('query failed')); }));
+  let nested = false;
+  const point = { ...child, getPreloadProps: () => ({ ...child.getPreloadProps(), entryPoints: { nested: { entryPoint: { ...child, getPreloadProps: () => { nested = true; return {}; } }, entryPointParams: {} } } }) };
+  preloadEntryPoint(synchronous.environment, point, {}, () => { failures++; })();
+  assert.equal(failures, 2);
+  assert.equal(synchronous.stats().retains, 0);
+  assert.equal(nested, false);
+  let fail;
+  const asynchronous = setup(() => Observable.create(sink => { fail = () => sink.error(new Error('late error')); }));
+  preloadEntryPoint(asynchronous.environment, child, {}, () => { failures++; });
+  assert.equal(asynchronous.stats().retains, 1);
+  fail();
+  assert.equal(asynchronous.stats().retains, 0);
+  assert.equal(failures, 3);
 });
 
 test('native Relay loads and renders the configured nested entrypoint graph', async (t) => {
