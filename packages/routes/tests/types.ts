@@ -23,6 +23,21 @@ const invalid: RouteEntryPoint<{ id: string }, { detail: Query }, Record<string,
 };
 void invalid;
 
+import { useMutationAction } from '../runtime/mutation';
+type SaveMutation = { variables: { name: string }; response: { saved: { id: string } } };
+function MutationTypes() {
+  const [commit, pending] = useMutationAction<SaveMutation>(request);
+  const response: Promise<SaveMutation['response']> = commit({ variables: { name: 'Ada' } });
+  const busy: boolean = pending;
+  // @ts-expect-error Artifact variables require a name string.
+  commit({ variables: { name: 1 } });
+  // @ts-expect-error Completion is represented by the returned promise.
+  commit({ variables: { name: 'Ada' }, onCompleted: () => {} });
+  void [response, busy];
+  return null;
+}
+void MutationTypes;
+
 const defaultEntry: RouteEntryPoint<{ id: string }, { detail: Query }> = {
   root: { getModuleId: () => 'defaults', getModuleIfRequired: () => () => null, load: async () => () => null },
   getPreloadProps: route => ({ queries: { detail: { parameters: request, variables: { id: route.id } } } }),

@@ -410,6 +410,56 @@ test('context updates preserve unowned repeated keys and remove owned collection
 
 const { readInitialData, withInitialData } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/initialData.mjs`));
 const { createFetchGraphQL } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/network.mjs`));
+test('mutation actions resolve typed responses, reject errors, track pending, and ignore completion after unmount', async () => {
+  const { JSDOM } = await import('jsdom');
+  const { act } = await import('react');
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://example.test/' });
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT };
+  globalThis.window = dom.window; globalThis.document = dom.window.document; globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const { createRoot } = await import('react-dom/client');
+  const { RelayEnvironmentProvider } = await import('react-relay');
+  const { useMutationAction } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/mutation.mjs`));
+  const mutation = { ...query, fragment: { ...query.fragment, name: 'SaveMutation' }, operation: { ...query.operation, name: 'SaveMutation' }, params: { ...query.params, name: 'SaveMutation', operationKind: 'mutation', cacheID: 'save', text: 'mutation SaveMutation { hello }' } };
+  const sinks = [];
+  const environment = new Environment({ network: Network.create(() => Observable.create(sink => { sinks.push(sink); })), store: new Store(new RecordSource()) });
+  let commit, pending;
+  function Probe() { [commit, pending] = useMutationAction(mutation); return createElement('p', null, String(pending)); }
+  const root = createRoot(document.getElementById('root'));
+  try {
+    await act(async () => { root.render(createElement(RelayEnvironmentProvider, { environment }, createElement(Probe))); });
+    assert.equal(pending, false);
+    let result;
+    await act(async () => { result = commit({ variables: {} }); });
+    assert.equal(pending, true);
+    await act(async () => { const sink = sinks.shift(); sink.next({ data: { hello: 'saved' } }); sink.complete(); });
+    assert.deepEqual(await result, { hello: 'saved' });
+    assert.equal(pending, false);
+    await act(async () => { result = commit({ variables: {} }); });
+    const graphQLError = assert.rejects(result, /one two/);
+    await act(async () => { const sink = sinks.shift(); sink.next({ data: { hello: 'partial' }, errors: [{ message: 'one' }, { message: 'two' }] }); sink.complete(); });
+    await graphQLError;
+    assert.equal(pending, false);
+    await act(async () => { result = commit({ variables: {} }); });
+    const networkError = new Error('network failed');
+    const rejection = assert.rejects(result, error => error === networkError);
+    await act(async () => { sinks.shift().error(networkError); });
+    await rejection;
+    assert.equal(pending, false);
+    let settled = 0;
+    await act(async () => {
+      commit({ variables: {} }).then(() => settled++, () => settled++);
+      commit({ variables: {} }).then(() => settled++, () => settled++);
+    });
+    await act(async () => { root.unmount(); });
+    const late = sinks.shift(); late.next({ data: { hello: 'late' } }); late.complete();
+    sinks.shift().error(new Error('late failure'));
+    await Promise.resolve();
+    assert.equal(settled, 0);
+  } finally {
+    await act(async () => { root.unmount(); });
+    dom.window.close(); globalThis.window = previous.window; globalThis.document = previous.document; globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act;
+  }
+});
 test('GraphQL network posts named operations with async headers and validates responses', async () => {
   let observed;
   const payload = { data: { hello: 'partial' }, errors: [{ message: 'field failed' }] };
