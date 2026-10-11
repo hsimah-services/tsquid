@@ -487,6 +487,9 @@ test('GraphQL network posts named operations with async headers and validates re
   assert.equal(observed.headers.get('content-type'), 'application/json');
   assert.equal(observed.headers.get('x-csrf-token'), 'query');
   assert.deepEqual(JSON.parse(observed.body), { query: query.params.text, operationName: 'TestQuery', variables: { id: '1' } });
+  await Observable.from(fetchGraphQL({ ...query.params, text: null, id: 'persisted-id' }, {}, {})).toPromise();
+  assert.deepEqual(JSON.parse(observed.body), { id: 'persisted-id', operationName: 'TestQuery', variables: {} });
+  await assert.rejects(Observable.from(fetchGraphQL({ ...query.params, text: null, id: null }, {}, {})).toPromise(), /neither query text nor a persisted id/);
   for (const [payload, status, error] of [
     [{}, 403, /403/],
     [{ errors: [{ message: 'one' }, { message: 'two' }] }, 200, /one two/],
