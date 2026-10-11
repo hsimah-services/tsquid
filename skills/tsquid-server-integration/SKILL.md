@@ -105,12 +105,14 @@ For each entry in `query.variables`, in any order:
 
 1. `input` is set and the parsed input has that field: use its value.
 2. Otherwise, `default` is set: use it.
-3. Otherwise: use `null`.
+3. Otherwise: omit the variable.
 
 Example: `/articles/7` → `{ "id": "7", "page": 1, "first": 20 }`.
 
-The generated `<Route>RouteQuery.getVariables(input)` returns these bindings for
-client entrypoints. This is what Relay sends for the same URL. Matching against it ignores top-level
+The client helper `<Route>RouteQuery.getVariables(input)` includes explicit nulls.
+These match omitted top-level variables under the rules below.
+
+This is what Relay sends for the same URL. Matching against it ignores top-level
 `null`s and object key order. Array order and types matter: `1` ≠ `"1"`.
 
 ## 4. Executing
