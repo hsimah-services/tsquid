@@ -161,6 +161,8 @@ const AppLink = createLink([ARTICLE_ROUTES.search, ...]);
   Astryx's `LinkProvider` component. `to` keeps router navigation; same-origin
   matched `href` links route and preload. Unmatched `href`, external, download,
   non-`_self` and `reloadDocument` links use `<a>`.
+- `href` is router-relative under a basename: `/profile` becomes `/app/profile`
+  when the router basename is `/app`, matching generated `getURI()` paths.
 - Preloading uses `fetchQuery` plus `retain`, per Relay's
   [retention contract](https://relay.dev/docs/api-reference/fetch-query/). It is
   released on failure, destination or environment change, unmount, or after 30 s.
