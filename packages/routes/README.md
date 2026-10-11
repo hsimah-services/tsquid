@@ -73,21 +73,28 @@ if (route.currentRoute === RouteName.ArticleSearch) {
 ## Entrypoints
 
 ```ts
-export const ARTICLE_ENTRY_POINT: RouteEntryPoint<RouteType, Queries, Nested, RuntimeProps, ExtraProps> = {
+export const ARTICLE_ENTRY_POINT: RouteEntryPoint<ArticleEntryPointParams, Queries, Nested, RuntimeProps, ExtraProps> = {
   root: resource('ArticlePage', ArticleEntryPoint),
-  getPreloadProps: route => ({
-    queries: { search: { parameters: ArticleSearchQuery, variables: { section: route.section } } },
-  }),
+  getPreloadProps: route => {
+    switch (route.currentRoute) {
+      case RouteName.ArticleSearch:
+        return { queries: { search: { parameters: ArticleSearchQuery, variables: { section: route.input.section } } } };
+      case RouteName.ArticleDetail:
+        return { queries: { detail: { parameters: ArticleDetailQuery, variables: { id: route.input.id } } } };
+    }
+  },
 };
 
 export const ARTICLE_ROUTES = {
-  search: defineRoute({
-    uri: ArticleSearchURI,
-    context: ArticleSearchRouteContext,
-    getRouteType: input => ({ ...input, tags: new Set(input.tags ?? []) }),
-    entryPoint: ARTICLE_ENTRY_POINT,
-  }),
+  search: defineRoute({ uri: ArticleSearchURI, context: ArticleSearchRouteContext, entryPoint: ARTICLE_ENTRY_POINT }),
 };
+```
+
+For derived route types, provide `getRouteType` and type the entrypoint with that
+result instead:
+
+```ts
+getRouteType: (input, currentRoute) => ({ currentRoute, ...input, tags: new Set(input.tags ?? []) })
 ```
 
 - `RouteEntryPoint` types Relay's `root` + `getPreloadProps` contract. Relay's own
@@ -99,7 +106,12 @@ export const ARTICLE_ROUTES = {
   component's props. Render nested references with `RouteEntryPointContainer`.
 - `resource(id, Component)` wraps an eager component. For a lazy one, implement
   `JSResourceReference`.
-- `getRouteType` maps URL input to any type (sets, enums, dates).
+- Without `getRouteType`, params are `{ currentRoute, input }`. The generated
+  `<Entry>EntryPointParams` union narrows input by `currentRoute` in `getPreloadProps`.
+- `getRouteType(input, currentRoute)` optionally maps URL input to another type
+  (sets, enums, dates).
+- Components read route state with `use<Entry>RouteContext()`; avoid copying it
+  into entrypoint `extraProps`.
 - `defineRoute(...).Root` is the router component; mount it under
   `RelayEnvironmentProvider`. It accepts `fallback`. It loads with
   `useEntryPointLoader` in a layout effect (disposed on replace and unmount), so

@@ -167,6 +167,27 @@ test('route roots bind context state and updateURI to the current location witho
   }
 });
 
+test('default route params agree in the active root and hover preload', async () => {
+  const { defineRoute } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+  const { MemoryRouter } = await import('react-router');
+  const { RelayEnvironmentProvider } = await import('react-relay');
+  const { TutorialsURI, TutorialsRouteContext, RouteName } = generated;
+  let preloaded, active;
+  const point = { root: resource('default', () => null), getPreloadProps: params => { preloaded = params; return {}; } };
+  const definition = defineRoute({ uri: TutorialsURI, context: TutorialsRouteContext, entryPoint: point });
+  const { environment } = setup();
+  const dispose = definition.preload(environment, '/tutorials?filter=x');
+  function Probe() { active = definition.useRouteType(); return null; }
+  renderToString(createElement(MemoryRouter, { initialEntries: ['/tutorials?filter=x'] },
+    createElement(RelayEnvironmentProvider, { environment }, createElement(definition.Root, { fallback: createElement(Probe) }))));
+  assert.deepEqual(active, { currentRoute: RouteName.Tutorials, input: { filter: 'x' } });
+  assert.deepEqual(preloaded, active);
+  dispose();
+  const custom = defineRoute({ uri: TutorialsURI, context: TutorialsRouteContext, getRouteType: (input, currentRoute) => ({ ...input, name: currentRoute }), entryPoint: point });
+  custom.preload(environment, '/tutorials?filter=y')();
+  assert.deepEqual(preloaded, { filter: 'y', name: RouteName.Tutorials });
+});
+
 
 test('context updates preserve unowned repeated keys and remove owned collections', async () => {
   const { defineRoute } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));

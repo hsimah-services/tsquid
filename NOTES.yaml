@@ -23,7 +23,7 @@ layout:
 
   packages/:
     routes/:
-      runtime/: uri.ts (createURI), context.tsx (registry), entrypoint.tsx (defineRoute, RouteEntryPoint, preloadEntryPoint, resource), Link.tsx (createLink), initialData.ts (readInitialData, withInitialData)
+      runtime/: uri.ts (createURI), context.tsx (registry), entrypoint.tsx (defineRoute defaults to currentRoute/input, RouteEntryPoint, preloadEntryPoint, resource), Link.tsx (createLink), initialData.ts (readInitialData, withInitialData)
       initial-data: "#tsquid-data JSON {version 1, responses[{operation, variables, response}]}; network wrapper answers once, sync; expires after first request's task; Root loads in layout effect"
       publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
       imports: relative, .js extensions

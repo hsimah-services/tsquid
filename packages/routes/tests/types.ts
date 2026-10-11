@@ -58,13 +58,41 @@ void RouteContextConsumer;
 
 
 import { defineRoute } from '../runtime/entrypoint';
-import { TutorialsURI, TutorialsRouteContext } from './routes.generated';
+import { TutorialsURI, TutorialsRouteContext, PlaylistsURI, PlaylistsRouteContext, type TutorialEntryPointParams } from './routes.generated';
+const sharedEntryPoint: RouteEntryPoint<TutorialEntryPointParams, Queries, Record<string, never>, Record<string, never>, null> = {
+  root: entryPoint.root,
+  getPreloadProps: route => {
+    if (route.currentRoute === RouteName.TutorialDetail) {
+      const id: string = route.input.id;
+      // @ts-expect-error Detail input has no filter.
+      route.input.filter;
+      return { queries: { detail: { parameters: request, variables: { id } } } };
+    }
+    const filter: string | undefined = route.input.filter;
+    void filter;
+    // @ts-expect-error List input has no id.
+    route.input.id;
+    return {};
+  },
+};
+const defaultRoute = defineRoute({ uri: TutorialsURI, context: TutorialsRouteContext, entryPoint: sharedEntryPoint });
+const defaultParams: { currentRoute: RouteName.Tutorials; input: { filter?: string } } = defaultRoute.useRouteType();
+void defaultParams;
+// @ts-expect-error Playlist does not belong to the Tutorial entrypoint.
+defineRoute({ uri: PlaylistsURI, context: PlaylistsRouteContext, entryPoint: sharedEntryPoint });
 // @ts-expect-error URI helpers cannot update routes; use the active context.
 TutorialsURI.updateURI('/tutorials', { filter: 'turn' });
 const tutorialRoute = defineRoute({
   uri: TutorialsURI,
   context: TutorialsRouteContext,
-  getRouteType: () => ({}),
+  getRouteType: (input, currentRoute) => {
+    const name: RouteName.Tutorials = currentRoute;
+    // @ts-expect-error The current route is the Tutorials literal.
+    const wrong: RouteName.TutorialDetail = currentRoute;
+    const filter: string | undefined = input.filter;
+    void [name, wrong, filter];
+    return {};
+  },
   entryPoint,
 });
 // @ts-expect-error Route definitions cannot update routes either.

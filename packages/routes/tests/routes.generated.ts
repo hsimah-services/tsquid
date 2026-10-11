@@ -50,6 +50,9 @@ export const TutorialsRouteContext = ROUTE_CONTEXT.forRoute(RouteName.Tutorials)
 export const TutorialDetailRouteContext = ROUTE_CONTEXT.forRoute(RouteName.TutorialDetail);
 export const PlaylistsRouteContext = ROUTE_CONTEXT.forRoute(RouteName.Playlists);
 
+export type PlaylistEntryPointParams =
+  { currentRoute: RouteName.Playlists; input: PlaylistsInputType };
+
 export type PlaylistRouteContextType = Extract<RouteContextType, { currentRoute: RouteName.Playlists }>;
 export function usePlaylistRouteContext(): PlaylistRouteContextType {
   const context = ROUTE_CONTEXT.useRouteContext();
@@ -61,6 +64,10 @@ export function usePlaylistRouteContext(): PlaylistRouteContextType {
       throw new Error('usePlaylistRouteContext requires the Playlist entrypoint; current route is ' + currentRoute);
   }
 }
+
+export type TutorialEntryPointParams =
+  { currentRoute: RouteName.Tutorials; input: TutorialsInputType }
+  | { currentRoute: RouteName.TutorialDetail; input: TutorialDetailInputType };
 
 export type TutorialRouteContextType = Extract<RouteContextType, { currentRoute: RouteName.Tutorials | RouteName.TutorialDetail }>;
 export function useTutorialRouteContext(): TutorialRouteContextType {

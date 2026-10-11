@@ -43,12 +43,31 @@ export function resource<C>(id: string, component: C): JSResourceReference<C> {
   return { getModuleId: () => id, getModuleIfRequired: () => component, load: () => Promise.resolve(component) };
 }
 
+type DefinedRoute<I, R> = URI<I> & {
+  Root: ComponentType<{ fallback?: ReactNode }>;
+  useRouteType(): R;
+  preload(environment: IEnvironment, uri: string): () => void;
+};
+export function defineRoute<I, N extends string>(config: {
+  uri: URI<I>;
+  context: RouteContext<I, N>;
+  entryPoint: AnyEntryPoint & { getPreloadProps: (route: { currentRoute: NoInfer<N>; input: NoInfer<I> }) => ReturnType<AnyEntryPoint['getPreloadProps']> };
+  getRouteType?: never;
+}): DefinedRoute<I, { currentRoute: N; input: I }>;
 export function defineRoute<I, R extends Record<string, unknown>, N extends string>(config: {
   uri: URI<I>;
   context: RouteContext<I, N>;
-  getRouteType: (input: I) => R;
-  entryPoint: AnyEntryPoint & { getPreloadProps: (route: R) => ReturnType<AnyEntryPoint['getPreloadProps']> };
-}) {
+  getRouteType: (input: I, currentRoute: N) => R;
+  entryPoint: AnyEntryPoint & { getPreloadProps: (route: NoInfer<R>) => ReturnType<AnyEntryPoint['getPreloadProps']> };
+}): DefinedRoute<I, R>;
+export function defineRoute<I, N extends string>(config: {
+  uri: URI<I>;
+  context: RouteContext<I, N>;
+  getRouteType?: (input: I, currentRoute: N) => Record<string, unknown>;
+  entryPoint: AnyEntryPoint;
+}): DefinedRoute<I, Record<string, unknown>> {
+  const getRouteType = (input: I) => config.getRouteType ? config.getRouteType(input, config.context.currentRoute) : { currentRoute: config.context.currentRoute, input };
+  type R = ReturnType<typeof getRouteType>;
   const RouteContext = createContext<R | null>(null);
   function useRouteType(): R {
     const value = useContext(RouteContext);
@@ -60,7 +79,7 @@ export function defineRoute<I, R extends Record<string, unknown>, N extends stri
     const environment = useRelayEnvironment();
     const uri = location.pathname + location.search + location.hash;
     const input = useMemo(() => config.uri.parseURI(uri), [uri]);
-    const route = useMemo(() => config.getRouteType(input), [input]);
+    const route = useMemo(() => getRouteType(input), [input]);
     const provider = useMemo(() => ({ getEnvironment: () => environment }), [environment]);
     const [reference, load] = useEntryPointLoader(provider, config.entryPoint) as unknown as [EntryPointReference<AnyEntryPoint> | null, (route: R) => void, () => void];
     // Before paint: a synchronous (preloaded or inlined) response skips the fallback.
@@ -73,7 +92,7 @@ export function defineRoute<I, R extends Record<string, unknown>, N extends stri
   return {
     ...config.uri, Root, useRouteType,
     preload(environment: IEnvironment, uri: string) {
-      return preloadEntryPoint(environment, config.entryPoint, config.getRouteType(config.uri.parseURI(uri)));
+      return preloadEntryPoint(environment, config.entryPoint, getRouteType(config.uri.parseURI(uri)));
     },
   };
 }
