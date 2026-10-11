@@ -16,6 +16,10 @@ export type ProfileInputType = {
 };
 export const ProfileURI = createURI<ProfileInputType>("/me", {});
 
+export const ProfileRouteQuery = {
+  operation: "ProfileQuery",
+  getVariables: (_input?: ProfileInputType) => ({}),
+} as const;
 
 export type RouteContextType =
   RouteContextValue<HomeInputType, RouteName.Home>

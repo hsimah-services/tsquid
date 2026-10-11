@@ -22,6 +22,11 @@
           "kind": "string",
           "optional": false,
           "in": "path"
+        },
+        "order": {
+          "kind": "string",
+          "optional": true,
+          "in": "query"
         }
       },
       "query": {
@@ -37,6 +42,7 @@
             "input": "id"
           },
           "order": {
+            "input": "order",
             "default": "POSITION"
           }
         }

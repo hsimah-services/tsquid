@@ -14,7 +14,7 @@ layout:
 
   crates/:
     tsquid-codegen/:
-      src/lib.rs: "generate_json / manifest_json ({config, persistedQueries} JSON) -> Result<String, String>; validation (incl. route queries via graphql-parser); unit tests"
+      src/lib.rs: "generate_json / manifest_json ({config, persistedQueries} JSON) -> Result<String, String>; validation (incl. route queries via graphql-parser); RouteQuery operation/getVariables beside URI, preserves narrowed inputs; unit tests"
       tests: include_str! fixtures from packages/routes/tests
     tsquid-codegen-wasm/:
       what: cdylib, wasm32-unknown-unknown, no I/O
@@ -27,7 +27,7 @@ layout:
       initial-data: "#tsquid-data JSON {version 1, responses[{operation, variables, response}]}; network wrapper answers once, sync; expires after first request's task; Root loads in layout effect"
       publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
       imports: relative, .js extensions
-      tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (also checks skills/*/vectors.json)
+      tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (builds codegen first; generates skills/*/vectors.json routes)
     codegen/:
       index.mjs: generate(config, persisted), manifest(config, persisted); instantiates dist/tsquid-codegen.wasm once
       bin/tsquid-codegen.mjs: "CONFIG OUTPUT.ts [--check]; reads config.persistedQueries; also writes OUTPUT.manifest.json (routes, ssr, resolved query)"

@@ -109,6 +109,9 @@ For each entry in `query.variables`, in any order:
 
 Example: `/articles/7` → `{ "id": "7", "page": 1, "first": 20 }`.
 
+The client helper `<Route>RouteQuery.getVariables(input)` includes explicit nulls.
+These match omitted top-level variables under the rules below.
+
 This is what Relay sends for the same URL. Matching against it ignores top-level
 `null`s and object key order. Array order and types matter: `1` ≠ `"1"`.
 
