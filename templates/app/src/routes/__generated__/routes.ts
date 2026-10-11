@@ -25,6 +25,9 @@ const ROUTE_CONTEXT = createRouteContextRegistry<RouteContextType>();
 export const HomeRouteContext = ROUTE_CONTEXT.forRoute(RouteName.Home);
 export const ProfileRouteContext = ROUTE_CONTEXT.forRoute(RouteName.Profile);
 
+export type HomeEntryPointParams =
+  { currentRoute: RouteName.Home; input: HomeInputType };
+
 export type HomeRouteContextType = Extract<RouteContextType, { currentRoute: RouteName.Home }>;
 export function useHomeRouteContext(): HomeRouteContextType {
   const context = ROUTE_CONTEXT.useRouteContext();
@@ -36,6 +39,9 @@ export function useHomeRouteContext(): HomeRouteContextType {
       throw new Error('useHomeRouteContext requires the Home entrypoint; current route is ' + currentRoute);
   }
 }
+
+export type ProfileEntryPointParams =
+  { currentRoute: RouteName.Profile; input: ProfileInputType };
 
 export type ProfileRouteContextType = Extract<RouteContextType, { currentRoute: RouteName.Profile }>;
 export function useProfileRouteContext(): ProfileRouteContextType {

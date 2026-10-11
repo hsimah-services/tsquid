@@ -412,6 +412,10 @@ fn generate(config: &Config) -> Result<String, String> {
         );
     }
     for (entry_point, routes) in entry_points {
+        out += &format!("\nexport type {entry_point}EntryPointParams =\n");
+        for (index, route) in routes.iter().enumerate() {
+            out += &format!("  {}{{ currentRoute: RouteName.{route}; input: {route}InputType }}{}\n", if index == 0 { "" } else { "| " }, if index + 1 == routes.len() { ";" } else { "" });
+        }
         let route_names = routes
             .iter()
             .map(|name| format!("RouteName.{name}"))
@@ -441,6 +445,7 @@ mod tests {
         assert!(text.contains("id: number"));
         assert!(text.contains("tags?: string[]"));
         assert!(text.contains("TutorialRouteContext"));
+        assert!(text.contains("export type TutorialEntryPointParams =\n  { currentRoute: RouteName.Tutorial; input: TutorialInputType };"));
     }
     #[test]
     fn rejects_bad_schemas() {

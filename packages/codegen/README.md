@@ -13,6 +13,7 @@ flag and resolved `query`, for servers), both or neither. Reads the Relay
 persisted-queries file named by `persistedQueries`, relative to the config.
 For each route query, emits `<Route>RouteQuery` with `operation` and
 `getVariables(input)` (declared variables, GraphQL defaults, otherwise null).
+Each entrypoint also gets an `<Entry>EntryPointParams` union of `{ currentRoute, input }`.
 
 ```js
 import { generate, manifest } from '@tsquid/codegen';

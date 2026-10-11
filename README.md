@@ -13,6 +13,8 @@ An opinionated React framework built on strongly typed route context.
   route context can `updateURI(patch)`.
 - **Relay entrypoints.** Each route preloads its query graph on navigation, and
   links preload it on hover and focus.
+  Generated `<Entry>EntryPointParams` narrow input by `currentRoute`;
+  `defineRoute` supplies `{ currentRoute, input }` unless `getRouteType` is set.
 - **Initial data.** A route can name one Relay query whose variables come from
   its URL. A generated manifest gives any server the URL patterns, query text and
   variable bindings. The server inlines the response as `#tsquid-data`, and the

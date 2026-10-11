@@ -99,7 +99,12 @@ export const ARTICLE_ROUTES = {
   component's props. Render nested references with `RouteEntryPointContainer`.
 - `resource(id, Component)` wraps an eager component. For a lazy one, implement
   `JSResourceReference`.
-- `getRouteType` maps URL input to any type (sets, enums, dates).
+- Without `getRouteType`, params are `{ currentRoute, input }`. The generated
+  `<Entry>EntryPointParams` union narrows input by `currentRoute` in `getPreloadProps`.
+- `getRouteType(input, currentRoute)` optionally maps URL input to another type
+  (sets, enums, dates).
+- Components read route state with `use<Entry>RouteContext()`; avoid copying it
+  into entrypoint `extraProps`.
 - `defineRoute(...).Root` is the router component; mount it under
   `RelayEnvironmentProvider`. It accepts `fallback`. It loads with
   `useEntryPointLoader` in a layout effect (disposed on replace and unmount), so
