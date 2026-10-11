@@ -55,6 +55,7 @@ run('constant-names', [
 
 run('module-exports', [
   { filename: '/project/src/components/tutorial/Tutorial.entrypoint.ts', code: 'export const TUTORIAL_ENTRY_POINT = {}; export type TutorialEntryPointProps = {};' },
+  { filename: '/project/src/components/tutorial/Tutorial.entrypoint.tsx', code: 'export const TUTORIAL_ENTRY_POINT = {}; export function TutorialEntryPoint() { return <Page />; }' },
   'export interface TutorialDetailProps {} export function TutorialDetail() {}',
   'export const TUTORIAL_DETAIL_QUERY = query; export function TutorialDetail() {}',
   'function TutorialDetail() {} export { TutorialDetail };',
@@ -71,6 +72,7 @@ run('module-exports', [
 
 run('local-component-names', [
   { filename: '/project/src/components/tutorial/Tutorial.entrypoint.ts', code: 'export function TutorialEntryPoint() {} function TutorialEntryPoint_Detail() {}' },
+  { filename: '/project/src/components/tutorial/Tutorial.entrypoint.tsx', code: 'export function TutorialEntryPoint() { return <TutorialEntryPoint_Detail />; } function TutorialEntryPoint_Detail() { return null; }' },
   'export function TutorialDetail() {} function TutorialDetail_Image() {}',
   'export function TutorialDetail() {} const TutorialDetail_Image = () => null;',
   'export function TutorialDetail() {} function useTutorialDetail() {}',

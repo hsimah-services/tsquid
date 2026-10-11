@@ -89,6 +89,7 @@ commands: # via scripts/toolchain.sh
 
 conventions:
   generated-output: committed
+  entrypoints: <Name>.entrypoint.ts or .tsx; basename unique across both extensions
   typescript: typescript = TS6 (JS API); "@typescript/native" = TS7 (tsc)
   caches: $XDG_CACHE_HOME/tsquid/{pnpm-store,cargo}
   container:

@@ -12,7 +12,7 @@
   same-named route fields, and the entrypoint must preload it with exactly those.
   Read any other query under its own `<Suspense>`. After changing GraphQL, run
   `pnpm relay` and then `pnpm routes`.
-- One entrypoint per entity: `src/components/<entity>/<Entity>.entrypoint.ts`.
+- One entrypoint per entity: `src/components/<entity>/<Entity>.entrypoint.ts` or `.tsx`.
   `getPreloadProps` declares its queries, and the filename determines
   `use<Entity>RouteContext()`.
 - A new route also needs `defineRoute` in `src/routes/<entity>Routes.ts`, plus
