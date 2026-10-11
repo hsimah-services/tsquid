@@ -61,7 +61,7 @@ export function lazyResource<C>(id: string, loader: () => Promise<C>): JSResourc
 type DefinedRoute<I, R> = URI<I> & {
   Root: ComponentType<{ fallback?: ReactNode }>;
   useRouteType(): R;
-  preload(environment: IEnvironment, uri: string): () => void;
+  preload(environment: IEnvironment, uri: string, onFailure?: () => void): () => void;
 };
 export function defineRoute<I, N extends string>(config: {
   uri: URI<I>;
@@ -106,8 +106,8 @@ export function defineRoute<I, N extends string>(config: {
   }
   return {
     ...config.uri, Root, useRouteType,
-    preload(environment: IEnvironment, uri: string) {
-      return preloadEntryPoint(environment, config.entryPoint, getRouteType(config.uri.parseURI(uri)));
+    preload(environment: IEnvironment, uri: string, onFailure?: () => void) {
+      return preloadEntryPoint(environment, config.entryPoint, getRouteType(config.uri.parseURI(uri)), onFailure);
     },
   };
 }
@@ -126,7 +126,7 @@ function getUpdatedURI<I>(definition: URI<I>, uri: string, input: I, patch: Part
 }
 
 /** Returns a disposer for both subscriptions and GC retains, including nested queries. */
-export function preloadEntryPoint(environment: IEnvironment, entryPoint: AnyEntryPoint, params: Record<string, unknown>): () => void {
+export function preloadEntryPoint(environment: IEnvironment, entryPoint: AnyEntryPoint, params: Record<string, unknown>, onFailure?: () => void): () => void {
   const disposers: (() => void)[] = [];
   let disposed = false;
   function dispose() {
@@ -134,11 +134,12 @@ export function preloadEntryPoint(environment: IEnvironment, entryPoint: AnyEntr
     disposed = true;
     disposers.reverse().forEach(fn => fn());
   }
+  function fail() { if (!disposed) { dispose(); onFailure?.(); } }
   function visit(point: AnyEntryPoint, input: Record<string, unknown>, ancestors: Set<AnyEntryPoint>) {
     if (disposed) return;
     if (ancestors.has(point)) throw new Error('Cyclic entrypoint graph');
     const next = new Set(ancestors).add(point);
-    void point.root.load().catch(() => { dispose(); });
+    void point.root.load().catch(fail);
     const preload = point.getPreloadProps(input);
     for (const query of Object.values(preload.queries ?? {})) {
       if (!query) continue;
@@ -151,7 +152,7 @@ export function preloadEntryPoint(environment: IEnvironment, entryPoint: AnyEntr
       const subscription = fetchQuery(environment, query.parameters, query.variables, {
         fetchPolicy: query.options?.fetchPolicy === 'network-only' || query.options?.fetchPolicy === 'store-and-network' ? 'network-only' : 'store-or-network',
         networkCacheConfig: query.options?.networkCacheConfig ?? undefined,
-      }).subscribe({ error: () => { dispose(); } });
+      }).subscribe({ error: fail });
       if (disposed) { subscription.unsubscribe(); return; }
       disposers.push(() => subscription.unsubscribe());
     }

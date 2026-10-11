@@ -4,7 +4,7 @@ import { useRelayEnvironment } from 'react-relay';
 import type { IEnvironment } from 'relay-runtime';
 import { normalizePathname } from './uri.js';
 
-export type PreloadRoute = { path: string; preload(environment: IEnvironment, uri: string): () => void };
+export type PreloadRoute = { path: string; preload(environment: IEnvironment, uri: string, onFailure?: () => void): () => void };
 
 /** Adapt once at the application boundary; all normal router Link props pass through. */
 export function createLink(routes: readonly PreloadRoute[]) {
@@ -26,7 +26,12 @@ export function createLink(routes: readonly PreloadRoute[]) {
       });
       if (!route) return;
       try {
-        const dispose = route.preload(environment, url.pathname + url.search);
+        let failed = false;
+        const dispose = route.preload(environment, url.pathname + url.search, () => {
+          failed = true;
+          if (pending.current) { clearTimeout(pending.current.timer); pending.current = null; }
+        });
+        if (failed) return;
         const timer = setTimeout(() => { dispose(); pending.current = null; }, 30_000);
         pending.current = { dispose, timer };
       } catch { /* Invalid speculative destinations remain normal links. */ }
