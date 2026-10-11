@@ -30,8 +30,9 @@ try {
     if (!statSync(root).isDirectory()) throw new Error(`Artifact root is not a directory: ${root}`);
     // Relay excludes generated directories from source scanning; we need those artifacts.
     const exclude = (config.excludes ?? []).filter(pattern => !pattern.includes('__generated__'));
+    const excluded = new Set(exclude.flatMap(pattern => globSync(pattern, { cwd: root })));
     const ids = new Set();
-    for (const file of globSync('**/*.graphql.{ts,js}', { cwd: root, exclude }).sort()) {
+    for (const file of globSync('**/*.graphql.{ts,js}', { cwd: root }).filter(file => !excluded.has(file)).sort()) {
       const source = readFileSync(resolve(root, file), 'utf8');
       if (!/"params"\s*:/.test(source)) continue;
       const id = source.match(/"params"\s*:\s*\{[\s\S]*?"id"\s*:\s*("(?:[^"\\]|\\.)*"|null)/)?.[1];
