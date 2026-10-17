@@ -682,3 +682,68 @@ test('server integration vectors match client routing, parsing and variable matc
     assert.equal(fetchFn({ name: 'Q' }, client) === response, match, JSON.stringify({ client, server }));
   }
 });
+
+test('route tests render every manifest route against mock data and report errors, gaps and leaks', async () => {
+  const { JSDOM } = await import('jsdom');
+  const { readFileSync } = await import('node:fs');
+  const { useEffect } = await import('react');
+  const { usePreloadedQuery, useRelayEnvironment } = await import('react-relay');
+  const { createOperationDescriptor } = await import('relay-runtime');
+  const { defineRoute } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/entrypoint.mjs`));
+  const { renderRoute, testRoutes } = await import(pathToFileURL(`${process.env.TSQUID_TEST_BUILD}/testing.mjs`));
+  const manifest = JSON.parse(readFileSync(new URL('./routes.generated.manifest.json', import.meta.url), 'utf8'));
+  const dom = new JSDOM('<!doctype html><body></body>', { url: 'https://example.test/' });
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT };
+  globalThis.window = dom.window; globalThis.document = dom.window.document;
+  try {
+    const seen = [];
+    function Page({ queries }) { const { hello } = usePreloadedQuery(query, queries.page); seen.push(hello); return createElement('p', null, hello); }
+    const queryPoint = root => ({ root, getPreloadProps: () => ({ queries: { page: { parameters: query, variables: {} } } }) });
+    const routes = {
+      Tutorials: defineRoute({ uri: generated.TutorialsURI, context: generated.TutorialsRouteContext, entryPoint: queryPoint(resource('tutorials', Page)) }),
+      TutorialDetail: defineRoute({ uri: generated.TutorialDetailURI, context: generated.TutorialDetailRouteContext, entryPoint: queryPoint(lazyResource('detail', async () => Page)) }),
+      Playlists: defineRoute({ uri: generated.PlaylistsURI, context: generated.PlaylistsRouteContext, entryPoint: { root: resource('playlists', () => createElement('h1', null, 'Playlists')), getPreloadProps: () => ({}) } }),
+    };
+    assert.equal(routes.TutorialDetail.name, generated.RouteName.TutorialDetail);
+    const run = async (cases, defaults) => {
+      const results = {};
+      const register = (name, fn) => { results[name] = fn; };
+      testRoutes(register, manifest, cases, defaults);
+      for (const [name, fn] of Object.entries(results)) results[name] = await fn().then(() => 'pass', error => error.message);
+      return results;
+    };
+    const cases = { Tutorials: { route: routes.Tutorials }, TutorialDetail: { route: routes.TutorialDetail, input: { id: '1' } }, Playlists: { route: routes.Playlists } };
+    assert.deepEqual(await run(cases), { Tutorials: 'pass', TutorialDetail: 'pass', Playlists: 'pass' });
+    let wrapped = 0;
+    seen.length = 0;
+    const defaults = { wrapper: ({ children }) => { wrapped++; return children; }, resolvers: { String: () => 'shared' } };
+    assert.deepEqual(await run({ ...cases, Tutorials: { route: routes.Tutorials, resolvers: { String: () => 'own' } } }, defaults), { Tutorials: 'pass', TutorialDetail: 'pass', Playlists: 'pass' });
+    assert.deepEqual([...new Set(seen)], ['own', 'shared']);
+    assert.ok(wrapped >= 3);
+    const { Playlists: _, ...missing } = cases;
+    assert.deepEqual(await run({ ...missing, Tutorials: { route: routes.Playlists }, Extra: { route: routes.Playlists } }), {
+      Tutorials: 'Test case Tutorials renders route Playlists', TutorialDetail: 'pass', Playlists: 'No test case for route Playlists', Extra: 'Route Extra is not in the manifest',
+    });
+
+    const view = await renderRoute(routes.TutorialDetail, { input: { id: '1' }, resolvers: { String: () => 'mocked' }, wrapper: ({ children }) => createElement('main', null, children) });
+    assert.equal(view.container.innerHTML, '<main><p>mocked</p></main>');
+    await view.unmount();
+    assert.equal(document.body.innerHTML, '');
+
+    function Broken() { throw new Error('page failed'); }
+    const broken = defineRoute({ uri: generated.PlaylistsURI, context: generated.PlaylistsRouteContext, entryPoint: { root: resource('broken', Broken), getPreloadProps: () => ({}) } });
+    await assert.rejects(renderRoute(broken), /page failed/);
+    function Leaky() {
+      const environment = useRelayEnvironment();
+      useEffect(() => { environment.retain(createOperationDescriptor(query, {})); }, [environment]);
+      return null;
+    }
+    const leaky = defineRoute({ uri: generated.PlaylistsURI, context: generated.PlaylistsRouteContext, entryPoint: { root: resource('leaky', Leaky), getPreloadProps: () => ({}) } });
+    await assert.rejects((await renderRoute(leaky)).unmount(), /Route Playlists left open after unmount: retain TestQuery/);
+    const stuck = defineRoute({ uri: generated.PlaylistsURI, context: generated.PlaylistsRouteContext, entryPoint: { root: lazyResource('stuck', () => new Promise(() => {})), getPreloadProps: () => ({}) } });
+    await assert.rejects(renderRoute(stuck, { timeout: 50 }), /Route Playlists did not settle within 50 ms/);
+    assert.equal(document.body.innerHTML, '');
+  } finally {
+    dom.window.close(); globalThis.window = previous.window; globalThis.document = previous.document; globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act;
+  }
+});
