@@ -11,7 +11,8 @@ Run commands as `scripts/toolchain.sh pnpm <cmd>`:
 
 | | |
 | --- | --- |
-| `check` | lint + architecture + relay + tsc + build + persisted-id check |
+| `check` | lint + architecture + relay + tsc + build + persisted-id check + `test:unit` |
+| `test:unit` | vitest (jsdom); `src/routes/routes.test.tsx` renders every route |
 | `lint`, `lint:fix` | eslint + `tsquid-check-architecture` |
 | `routes`, `routes:check` | generate / verify `src/routes/__generated__` (TS + server manifest) |
 | `relay`, `relay:watch`, `relay:check` | tsquid-relay persist / persist --watch / check |
@@ -24,7 +25,8 @@ Run commands as `scripts/toolchain.sh pnpm <cmd>`:
 2. Create `src/components/<entity>/<Entity>.entrypoint.ts` or `.tsx` with `getPreloadProps`.
 3. Call `defineRoute` in `src/routes/<entity>Routes.ts`, then register it in
    `src/app/router.tsx` and in the `createLink` list in `src/app/AppLink.tsx`.
-4. Link to it with `<Route>URI.getURI(input)`.
+4. Add its case to `src/routes/routes.test.tsx` (tsc fails until you do).
+5. Link to it with `<Route>URI.getURI(input)`.
 
 ## Initial data
 

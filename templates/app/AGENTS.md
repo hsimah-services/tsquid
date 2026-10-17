@@ -16,7 +16,9 @@
   `getPreloadProps` declares its queries, and the filename determines
   `use<Entity>RouteContext()`.
 - A new route also needs `defineRoute` in `src/routes/<entity>Routes.ts`, plus
-  entries in `src/app/router.tsx` and the `createLink` list in `src/app/AppLink.tsx`.
+  entries in `src/app/router.tsx` and the `createLink` list in `src/app/AppLink.tsx`,
+  and a case in `src/routes/routes.test.tsx` (sample `input` for required fields,
+  `resolvers` for data the page needs). Write deeper page tests with `renderRoute`.
 - Link with `<Route>URI.getURI(input)`; change the current URL with
   `updateURI(patch)`. Never hand-write URLs.
 - Pages read queries with `usePreloadedQuery` inside a local hook. Mutations go

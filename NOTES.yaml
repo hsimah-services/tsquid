@@ -23,7 +23,7 @@ layout:
 
   packages/:
     routes/:
-      runtime/: uri.ts (createURI), context.tsx (registry), entrypoint.tsx (defineRoute defaults to currentRoute/input, RouteEntryPoint, preloadEntryPoint, resource), Link.tsx (createLink), initialData.ts (readInitialData, withInitialData)
+      runtime/: uri.ts (createURI), context.tsx (registry), entrypoint.tsx (defineRoute defaults to currentRoute/input, RouteEntryPoint, preloadEntryPoint, resource), Link.tsx (createLink), initialData.ts (readInitialData, withInitialData), testing.tsx (testRoutes, renderRoute)
       initial-data: "#tsquid-data JSON {version 1, responses[{operation, variables, response}]}; network wrapper answers once, sync; expires after first request's task; Root loads in layout effect"
       publish: dist/ via tsconfig.build.json on prepack; publishConfig.exports
       imports: relative, .js extensions
@@ -35,6 +35,9 @@ layout:
       dom-tests: jsdom for link events and route lifecycle
       network.ts: createFetchGraphQL; named JSON POST with text or persisted id, async headers/custom fetch, abort on unsubscribe, partial GraphQL data preserved
       mutation.ts: useMutationAction; typed promise + pending, errors reject, completion after unmount ignored
+      testing.tsx: "testRoutes(test, manifest, cases, defaults?): cases mapped over RouteContextType (tsc coverage) + manifest check; renderRoute: MemoryRouter + TestEnvironment (Environment subclass; requests registered from retain/execute, answered by MockPayloadGenerator); fails on errorFallback, unsettled, open retains/requests after unmount"
+      relay-test-utils: optional peer (with react-dom); Flow-only, so one @ts-expect-error import + structural type; avoid createMockEnvironment (jest globals under NODE_ENV=test)
+      defineRoute: result carries name (route name N)
       tests/: routes.json + persisted_queries.json + routes.generated.{ts,manifest.json} (fixture), types.ts (tsc), run.mjs -> runtime.test.mjs (builds codegen first; generates skills/*/vectors.json routes)
     codegen/:
       index.mjs: generate(config, persisted), manifest(config, persisted); instantiates dist/tsquid-codegen.wasm once
@@ -61,6 +64,8 @@ layout:
     app/:
       what: starter; workspace member (CI runs its check); packed into @tsquid/create
       routes: Home (/) static, Profile (/me) + ProfileQuery (route query)
+      tests: vitest + jsdom (vite.config test); src/routes/routes.test.tsx testRoutes case per route + renderRoute example; test:unit in pnpm check
+      src/app/AppProviders.tsx: Theme + LinkProvider; App and route tests share it
       relay: persistConfig persisted_queries.json (include_query_text); tsquid-relay persist/check; run persist before routes, check before build in pnpm check
       schema.graphql: placeholder
       src/: app/ (providers, router, AppLink), relay/, routes/ (+ __generated__), components/{navigation,home,profile}; ProfilePage lazy root
@@ -101,5 +106,5 @@ todo:
   - "@tsquid/create first publish is manual; then add its trusted publisher (stage only)"
   - changesets if manual bumps get tedious
   - astryx integration (templates/docs via astryx CLI)?
-  - starter not browser-tested
+  - starter not browser-tested (route tests are jsdom only)
   - starter bundle > 500 kB (astryx); code splitting

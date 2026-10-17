@@ -24,6 +24,9 @@ An opinionated React framework built on strongly typed route context.
   [`skills/tsquid-server-integration`](skills/tsquid-server-integration).
   Entrypoints use `<Route>RouteQuery.getVariables(input)` for the same bindings,
   including GraphQL defaults and nulls; `operation` names the query.
+- **Route tests.** `testRoutes` takes one case per route in the catalogue (tsc
+  fails on a missing one) and renders each against mock Relay data, failing on
+  errors, unsettled loads and leaked retains.
 - **Astryx + StyleX** for all UI.
 
 Stack: React 19, React Router 8, Relay 21, Astryx 0.6, StyleX 0.19, Vite 8.
@@ -32,7 +35,7 @@ Stack: React 19, React Router 8, Relay 21, Astryx 0.6, StyleX 0.19, Vite 8.
 
 | Package | |
 | --- | --- |
-| [`@tsquid/routes`](packages/routes) | Runtime: URIs, route context, entrypoints, preloading links, initial data |
+| [`@tsquid/routes`](packages/routes) | Runtime: URIs, route context, entrypoints, preloading links, initial data, route tests |
 | [`@tsquid/codegen`](packages/codegen) | `tsquid-codegen` CLI |
 | [`@tsquid/vite`](packages/vite) | Vite preset |
 | [`@tsquid/eslint-plugin`](packages/eslint-plugin) | UI rules, architecture checker, [UI standards](packages/eslint-plugin/docs/ui-standards.md) |

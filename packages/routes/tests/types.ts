@@ -138,3 +138,47 @@ tutorialRoute.updateURI('/tutorials', { filter: 'turn' });
 TutorialsURI.refresh();
 // @ts-expect-error Inactive context definitions do not expose route refresh.
 TutorialsRouteContext.refresh();
+
+
+// Route tests need a case for every route, with the matching definition and required input.
+import { renderRoute, testRoutes, type RouteTestCases } from '../runtime/testing';
+import { TutorialDetailURI, TutorialDetailRouteContext, type RouteContextType } from './routes.generated';
+declare const routeTest: (name: string, fn: () => Promise<void>) => void;
+declare const manifest: { routes: { name: string }[] };
+const playlistsRoute = defineRoute({ uri: PlaylistsURI, context: PlaylistsRouteContext, entryPoint: { root: entryPoint.root, getPreloadProps: () => ({}) } });
+const detailRoute = defineRoute({ uri: TutorialDetailURI, context: TutorialDetailRouteContext, entryPoint: sharedEntryPoint });
+const routeName: RouteName.Tutorials = defaultRoute.name;
+void routeName;
+testRoutes<RouteContextType>(routeTest, manifest, {
+  Tutorials: { route: defaultRoute },
+  TutorialDetail: { route: detailRoute, input: { id: '1' }, resolvers: { Tutorial: () => ({ title: 'Mocked' }) } },
+  Playlists: { route: playlistsRoute },
+});
+// @ts-expect-error Every route in the catalogue needs a case.
+testRoutes<RouteContextType>(routeTest, manifest, { Tutorials: { route: defaultRoute }, TutorialDetail: { route: detailRoute, input: { id: '1' } } });
+testRoutes<RouteContextType>(routeTest, manifest, {
+  Tutorials: { route: defaultRoute },
+  TutorialDetail: { route: detailRoute, input: { id: '1' } },
+  Playlists: { route: playlistsRoute },
+  // @ts-expect-error Cases name catalogue routes only.
+  Extra: { route: playlistsRoute },
+});
+const wrongRoute: RouteTestCases<RouteContextType> = {
+  // @ts-expect-error A case renders its own route's definition.
+  Tutorials: { route: playlistsRoute },
+  TutorialDetail: { route: detailRoute, input: { id: '1' } },
+  Playlists: { route: playlistsRoute },
+};
+const missingInput: RouteTestCases<RouteContextType> = {
+  Tutorials: { route: defaultRoute, input: { filter: 'optional' } },
+  // @ts-expect-error Routes with required fields need input.
+  TutorialDetail: { route: detailRoute },
+  Playlists: { route: playlistsRoute },
+};
+void [wrongRoute, missingInput];
+void renderRoute(defaultRoute);
+void renderRoute(detailRoute, { input: { id: '1' } });
+// @ts-expect-error Required fields need input.
+void renderRoute(detailRoute);
+// @ts-expect-error Input matches the route's fields.
+void renderRoute(detailRoute, { input: { id: 1 } });

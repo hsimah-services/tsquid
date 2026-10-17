@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import { tsquid } from '@tsquid/vite';
 
@@ -7,6 +8,7 @@ const GRAPHQL_PROXY_TARGET = process.env.GRAPHQL_PROXY_TARGET ?? 'http://localho
 
 export default defineConfig({
   plugins: tsquid(),
+  test: { environment: 'jsdom' },
   server: {
     proxy: {
       '/graphql': { target: GRAPHQL_PROXY_TARGET, changeOrigin: true },

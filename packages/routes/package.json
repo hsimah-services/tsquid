@@ -26,7 +26,8 @@
     "./Link": "./runtime/Link.tsx",
     "./initialData": "./runtime/initialData.ts",
     "./network": "./runtime/network.ts",
-    "./mutation": "./runtime/mutation.ts"
+    "./mutation": "./runtime/mutation.ts",
+    "./testing": "./runtime/testing.tsx"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -36,9 +37,19 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-router": "^8.0.0",
+    "react-dom": "^19.0.0",
     "react-relay": "^21.0.0",
-    "relay-runtime": "^21.0.0"
+    "react-router": "^8.0.0",
+    "relay-runtime": "^21.0.0",
+    "relay-test-utils": "^21.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    },
+    "relay-test-utils": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
@@ -50,6 +61,7 @@
     "react-relay": "^21.0.1",
     "react-router": "^8.3.1",
     "relay-runtime": "^21.0.1",
+    "relay-test-utils": "^21.0.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "engines": {
@@ -90,6 +102,10 @@
       "./mutation": {
         "types": "./dist/mutation.d.ts",
         "default": "./dist/mutation.js"
+      },
+      "./testing": {
+        "types": "./dist/testing.d.ts",
+        "default": "./dist/testing.js"
       }
     }
   }
