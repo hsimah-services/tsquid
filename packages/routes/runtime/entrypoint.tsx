@@ -85,7 +85,7 @@ export function lazyResource<C>(id: string, loader: () => Promise<C>): JSResourc
 }
 
 export type RouteErrorFallbackProps = { error: Error; retry: () => void };
-type RouteRootProps = { fallback?: ReactNode; errorFallback?: (props: RouteErrorFallbackProps) => ReactNode };
+export type RouteRootProps = { fallback?: ReactNode; errorFallback?: (props: RouteErrorFallbackProps) => ReactNode };
 class RouteErrorBoundary extends Component<{ resetKey: string; errorFallback?: RouteRootProps['errorFallback']; children: (attempt: number) => ReactNode }, { error: Error | null; attempt: number; resetKey: string }> {
   state: { error: Error | null; attempt: number; resetKey: string } = { error: null, attempt: 0, resetKey: this.props.resetKey };
   static getDerivedStateFromError(error: unknown) { return { error: error instanceof Error ? error : new Error(String(error)) }; }
@@ -101,7 +101,8 @@ class RouteErrorBoundary extends Component<{ resetKey: string; errorFallback?: R
   }
 }
 
-type DefinedRoute<I, R> = URI<I> & {
+type DefinedRoute<I, R, N extends string> = URI<I> & {
+  name: N;
   Root: ComponentType<RouteRootProps>;
   useRouteType(): R;
   preload(environment: IEnvironment, uri: string, onFailure?: () => void): () => void;
@@ -111,19 +112,19 @@ export function defineRoute<I, N extends string>(config: {
   context: RouteContext<I, N>;
   entryPoint: AnyEntryPoint & { getPreloadProps: (route: { currentRoute: NoInfer<N>; input: NoInfer<I> }) => ReturnType<AnyEntryPoint['getPreloadProps']> };
   getRouteType?: never;
-}): DefinedRoute<I, { currentRoute: N; input: I }>;
+}): DefinedRoute<I, { currentRoute: N; input: I }, N>;
 export function defineRoute<I, R extends Record<string, unknown>, N extends string>(config: {
   uri: URI<I>;
   context: RouteContext<I, N>;
   getRouteType: (input: I, currentRoute: N) => R;
   entryPoint: AnyEntryPoint & { getPreloadProps: (route: NoInfer<R>) => ReturnType<AnyEntryPoint['getPreloadProps']> };
-}): DefinedRoute<I, R>;
+}): DefinedRoute<I, R, N>;
 export function defineRoute<I, N extends string>(config: {
   uri: URI<I>;
   context: RouteContext<I, N>;
   getRouteType?: (input: I, currentRoute: N) => Record<string, unknown>;
   entryPoint: AnyEntryPoint;
-}): DefinedRoute<I, Record<string, unknown>> {
+}): DefinedRoute<I, Record<string, unknown>, N> {
   const getRouteType = (input: I) => config.getRouteType ? config.getRouteType(input, config.context.currentRoute) : { currentRoute: config.context.currentRoute, input };
   type R = ReturnType<typeof getRouteType>;
   const refreshingEntryPoint = networkOnly(config.entryPoint);
@@ -158,7 +159,7 @@ export function defineRoute<I, N extends string>(config: {
     </RouteRefreshContext></RouteContext></config.context.Context>;
   }
   return {
-    ...config.uri, Root, useRouteType,
+    ...config.uri, name: config.context.currentRoute, Root, useRouteType,
     preload(environment: IEnvironment, uri: string, onFailure?: () => void) {
       return preloadEntryPoint(environment, config.entryPoint, getRouteType(config.uri.parseURI(uri)), onFailure);
     },
